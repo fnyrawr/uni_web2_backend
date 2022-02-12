@@ -1,0 +1,22 @@
+{
+  "name": "we2-communityforum",
+  "version": "0.0.1",
+  "description": "Semesterproject of WebEng2",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.bht-berlin.de:s51541/we2-communityforum.git"
+  },
+  "author": "Florian Kate",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^5.0.1",
+    "config": "^3.3.7",
+    "express": "^4.17.2",
+    "mongodb": "^4.3.1",
+    "mongoose": "^6.2.1"
+  }
+}
