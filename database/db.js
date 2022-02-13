@@ -1,5 +1,6 @@
 var client = require('mongoose')
 const config = require('config')
+var logger = require('../config/winston')
 
 let _db
 
@@ -12,7 +13,7 @@ function initDb(callback) {
         if (err) {
             return callback(err)
         }
-        console.log("DB initialized - connected to: " + config.db.connectionString.split("@")[1]);
+        logger.debug("DB initialized - connected to: " + config.db.connectionString.split("@")[1]);
         _db = db;
         return callback(null, _db)
     }

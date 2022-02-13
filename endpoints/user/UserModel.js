@@ -1,5 +1,6 @@
 var mongoose = require('mongoose')
 const bcrypt = require('bcrypt')
+var logger = require('../../config/winston')
 
 const UserSchema = new mongoose.Schema({
     id: Number,
@@ -16,13 +17,13 @@ UserSchema.methods.whoAmI = function () {
     var output = this.userID
         ? "My name is " + this.username
         : "I don't have a name";
-    console.log(output)
+    logger.info(output)
 }
 
 UserSchema.pre('save', function (next) {
     var user = this
 
-    console.log("Pre-save " + this.password + " change: " + this.isModified('password'))
+    logger.debug("Pre-save " + this.password + " change: " + this.isModified('password'))
 
     if(!user.isModified('password')) { return next() };
     bcrypt.hash(user.password, 10).then((hashedPassword) => {
