@@ -20,10 +20,15 @@ function initDb(callback) {
 }
 
 function getDb() {
-    return _db;
+    return _db
+}
+
+function closeDb() {
+    client.connection.close()
 }
 
 module.exports = {
     getDb,
-    initDb
+    initDb,
+    closeDb
 }

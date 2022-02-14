@@ -1,2 +1,74 @@
 ###
-http://localhost:8080/user
+// no users should be in the database here
+http://localhost:8080/publicUser/
+
+###
+// creating first user who is admin
+POST http://localhost:8080/publicUser/
+Content-Type: application/json
+
+{
+  "userID": "admin",
+  "userName": "Udo Müller",
+  "password": "123",
+  "isAdministrator": true
+}
+
+###
+// find admin in database
+POST http://localhost:8080/publicUser/getUserByID
+Content-Type: application/json
+
+{
+  "userID": "admin"
+}
+
+###
+// creating second user who is not admin
+POST http://localhost:8080/publicUser/
+Content-Type: application/json
+
+{
+  "userID": "manfred",
+  "userName": "Manfred Mustermann",
+  "password": "asdf"
+}
+
+###
+// find manfred in database
+POST http://localhost:8080/publicUser/getUserByID
+Content-Type: application/json
+
+{
+  "userID": "manfred"
+}
+
+###
+// update manfred
+POST http://localhost:8080/publicUser/
+Content-Type: application/json
+
+{
+  "userID": "manfred",
+  "userName": "Manfred Müller"
+}
+
+###
+// 2 users should be in the database now
+http://localhost:8080/publicUser/
+
+###
+POST http://localhost:8080/publicUser/deleteUserByID
+Content-Type: application/json
+
+{
+  "userID": "admin"
+}
+
+###
+POST http://localhost:8080/publicUser/deleteUserByID
+Content-Type: application/json
+
+{
+  "userID": "manfred"
+}

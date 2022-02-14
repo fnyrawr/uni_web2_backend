@@ -25,7 +25,7 @@ function findUserBy(searchUserID, callback) {
         var query = User.findOne({ userID: searchUserID })
         query.exec(function(err, user) {
             if(err) {
-                logger.error("Could not find user for userID: " + searchUserID)
+                logger.warn("Could not find user for userID: " + searchUserID)
                 return callback("Could not find user for userID: " + searchUserID, null)
             }
             else {
@@ -34,6 +34,7 @@ function findUserBy(searchUserID, callback) {
                     callback(null, user)
                 }
                 else {
+                    // creating admin account if didn't exist yet
                     if ('admin' == searchUserID) {
                         logger.info('There is no admin account yet, creating now with defaults')
                         var adminUser = new User();
@@ -53,8 +54,8 @@ function findUserBy(searchUserID, callback) {
                         })
                     }
                     else {
-                        logger.error("Could not find User for userID: " + searchUserID)
-                        callback(null, user)
+                        logger.warn("Could not find User for userID: " + searchUserID)
+                        callback("UserID " + searchUserID + " not found", null)
                     }
                 }
             }
@@ -62,7 +63,76 @@ function findUserBy(searchUserID, callback) {
     }
 }
 
+function insertOne(userProps, callback) {
+    logger.debug("Trying to create a new user.")
+    var newUser = new User({
+        userID: userProps.userID,
+        userName: userProps.userName,
+        email: userProps.email,
+        password: userProps.password
+    })
+
+    newUser.save(function(err, newUser) {
+        if(err) {
+            logger.error("Could not create user: " + err)
+            callback("Could not create user: " + err, null)
+        }
+        else {
+            callback(null, newUser)
+        }
+    })
+}
+
+function updateOne(user, userProps, callback) {
+    logger.debug("Trying to update user with userID: " + user.userID)
+    if(userProps.userName) {
+        user.userName = userProps.userName
+    }
+    if(userProps.email) {
+        user.email = userProps.email
+    }
+    if(userProps.password) {
+        user.password = userProps.password
+    }
+
+    user.save(function(err, newUser) {
+        if(err) {
+            logger.error("Could not update user: " + err)
+            callback("Could not update user: " + err, null)
+        }
+        else {
+            callback(null, newUser)
+        }
+    })
+}
+
+function deleteOne(userID, callback) {
+    logger.debug("Trying to delete user with userID: " + userID)
+
+    findUserBy(userID, function(err, user){
+        if(user) {
+            user.remove(function(err) {
+                if(err) {
+                    logger.error("Error while deletion of user with userID: " + userID)
+                    callback("Error while deletion", null)
+                }
+                else {
+                    callback(null, "Deleted User")
+                }
+            })
+        }
+        else {
+            logger.error("Deletion of user with userID: " + userID + " failed: User not found")
+            callback("Could not delete user " + userID + ": User not found", null)
+        }
+    })
+}
+
+
 module.exports = {
     getUsers,
-    findUserBy
+    findUserBy,
+    insertOne,
+    updateOne,
+    deleteOne
 }

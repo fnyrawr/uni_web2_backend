@@ -4,34 +4,28 @@ var config = require("config")
 var logger = require('../../config/winston')
 
 function createSessionToken(props, callback) {
-    logger.debug("AuthenticationService: create Token")
-
     if(!props) {
-        logger.error("Error: no json body")
+        logger.error("Error: no JSON-Body")
         callback("JSON-Body missing", null, null)
         return
     }
 
     userService.findUserBy(props.userID, function(err, user) {
         if(user) {
-            logger.debug("Found User, checking password")
-
             user.comparePassword(props.password, function(err, isMatch) {
                 if(err) {
-                    logger.error("Password is invalid")
+                    logger.warn("Found user but password is invalid")
                     callback(err, null)
                 }
                 else {
                     if(isMatch) {
-                        logger.debug("Password is correct. Creating token.")
-
                         var issuedAt = new Date().getTime()
                         var expirationTime = config.get('session.timeout')
                         var expiresAt = issuedAt + (expirationTime * 1000)
                         var privateKey = config.get('session.tokenKey')
                         let token = jwt.sign({ "user": user.userID }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })
 
-                        logger.debug("Token created: " + token)
+                        logger.info("Token for user " + props.userID + " created: " + token)
 
                         callback(null, token, user)
                     }
@@ -43,7 +37,7 @@ function createSessionToken(props, callback) {
             })
         }
         else {
-            logger.error("Did not find user for userID: " + props.userID)
+            logger.error("Could not find user for userID: " + props.userID)
             callback("Could not find user", null)
         }
     })

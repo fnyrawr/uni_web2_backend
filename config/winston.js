@@ -3,20 +3,25 @@ var winston = require('winston')
 var path = require('path')
 var PROJECT_ROOT = path.join(__dirname, '..')
 
+const consoleLogFormat = winston.format.printf( ({ level, message, timestamp }) => {
+    return `[${level}] [${timestamp}] ${message}`;
+});
+
 var options = {
     file: {
         level: 'info',
         filename: `${appRoot}/log/app.log`,
         handleExceptions: true,
-        json: true,
+        format: winston.format.json(),
         maxsize: 5242880, // 5MB
         maxFiles: 5,
-        colorize: false,
     }, console: {
         level: 'debug',
         handleExceptions: true,
-        json: false,
-        colorize: true,
+        format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.timestamp({ format: 'DD.MM.YY HH:mm:ss' }),
+            consoleLogFormat),
     },
 }
 
@@ -80,6 +85,13 @@ function getStackInfo(stackIndex) {
         }
     }
 }
+
+winston.addColors({
+    error: 'red',
+    warn: 'yellow',
+    info: 'cyan',
+    debug: 'green'
+})
 
 module.exports.debug = module.exports.log = function() {
     logger.debug.apply(logger, formatLogArguments(arguments))

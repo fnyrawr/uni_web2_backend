@@ -6,7 +6,7 @@ var userService = require("./UserService")
 
 router.get('/', function(req, res, next) {
     userService.getUsers(function(err, result) {
-        logger.debug("Result: " + result)
+        logger.debug("All current users: " + result)
         if(result) {
             res.send(Object.values(result))
         }
