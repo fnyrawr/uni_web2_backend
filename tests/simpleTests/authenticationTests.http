@@ -1,8 +1,26 @@
+// Login with basic authentication using correct credentials admin:123
 ###
-POST http://localhost:8080/authenticate/login
-Content-Type: application/json
+# @name loginAdminCorrect
+POST http://localhost:8080/authenticate/
+Authorization: Basic YWRtaW46MTIz
 
-{
-  "userID": "admin",
-  "password": "123"
-}
+// Login with basic authentication using wrong credentials
+###
+POST http://localhost:8080/authenticate
+Authorization: Basic admin:1234
+
+@adminToken = {{loginAdminCorrect.response.headers.Authorization}}
+
+// get all users without token
+###
+http://localhost:8080/user
+
+// get all users with admin token
+###
+http://localhost:8080/user
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+
+// Login for manfred
+###
+POST http://localhost:8080/authenticate/
+Authorization: Basic bWFuZnJlZDphc2Rm

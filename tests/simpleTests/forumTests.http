@@ -1,0 +1,83 @@
+// get all forums without token
+###
+http://localhost:8080/forum
+
+// creating a forum without authorization
+###
+POST http://localhost:8080/forum
+Content-Type: application/json
+
+{
+  "forumName": "Test Forum",
+  "forumDescription": "Testing changes",
+  "ownerID": "admin"
+}
+
+###
+// creating a forum, owner is admin
+###
+POST http://localhost:8080/forum
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+Content-Type: application/json
+
+{
+ "forumName": "Test Forum",
+ "forumDescription": "Testing changes",
+  "ownerID": "admin"
+}
+
+###
+// trying to change a forum, owner is admin, user is manfred
+###
+POST http://localhost:8080/forum
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTgzNTkzMCwiZXhwIjoxNjQ3NDgyMDY2NjkzfQ.tyrG07QaHm5ZqzaM68jdFoSLkzH8xg_HKlKXv3yBsZ4
+Content-Type: application/json
+
+{
+  "forumName": "Manni's Forum",
+  "forumDescription": "Here is Manni",
+  "ownerID": "killah247"
+}
+
+###
+// delete a forum, owner is admin
+###
+POST http://localhost:8080/forum/deleteForumByName
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+Content-Type: application/json
+
+{
+  "forumName": "Test Forum"
+}
+
+###
+// get all forums for admin
+###
+http://localhost:8080/forum/getByOwnerID
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+
+// get all forums for manfred
+###
+http://localhost:8080/forum/getByOwnerID
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTgzNTkzMCwiZXhwIjoxNjQ3NDgyMDY2NjkzfQ.tyrG07QaHm5ZqzaM68jdFoSLkzH8xg_HKlKXv3yBsZ4
+
+// get all forums for manfred with admin token
+###
+POST http://localhost:8080/forum/getByOwnerID
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+Content-Type: application/json
+
+{
+  "ownerID": "manfred"
+}
+
+###
+// get all forums for admin with user token
+###
+POST http://localhost:8080/forum/getByOwnerID
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTgzNTkzMCwiZXhwIjoxNjQ3NDgyMDY2NjkzfQ.tyrG07QaHm5ZqzaM68jdFoSLkzH8xg_HKlKXv3yBsZ4
+Content-Type: application/json
+
+{
+  "ownerID": "admin"
+}

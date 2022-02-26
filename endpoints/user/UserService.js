@@ -19,14 +19,13 @@ function findUserBy(searchUserID, callback) {
 
     if(!searchUserID) {
         callback("UserID is missing")
-        return
     }
     else {
         var query = User.findOne({ userID: searchUserID })
         query.exec(function(err, user) {
             if(err) {
                 logger.warn("Could not find user for userID: " + searchUserID)
-                return callback("Could not find user for userID: " + searchUserID, null)
+                callback("Could not find user for userID: " + searchUserID, null)
             }
             else {
                 if(user) {
@@ -63,6 +62,31 @@ function findUserBy(searchUserID, callback) {
     }
 }
 
+function getIsAdmin(searchUserID, callback) {
+    if(!searchUserID) {
+        logger.warn("UserID is missing")
+        callback(null, false)
+    }
+    else {
+        var query = User.findOne({ userID: searchUserID })
+        query.exec(function(err, user) {
+            if(err) {
+                logger.warn("Could not find user for userID: " + searchUserID)
+                return callback("Could not find user: " + err, false)
+            }
+            else {
+                if(user) {
+                    return callback(null, user.isAdministrator)
+                }
+                else {
+                    logger.warn("Could not find User for userID: " + searchUserID)
+                    return callback("Could not find user for ID: " + searchUserID, false)
+                }
+            }
+        })
+    }
+}
+
 function insertOne(userProps, callback) {
     logger.debug("Trying to create a new user.")
     var newUser = new User({
@@ -75,10 +99,10 @@ function insertOne(userProps, callback) {
     newUser.save(function(err, newUser) {
         if(err) {
             logger.error("Could not create user: " + err)
-            callback("Could not create user: " + err, null)
+            return callback("Could not create user: " + err, null)
         }
         else {
-            callback(null, newUser)
+            return callback(null, newUser)
         }
     })
 }
@@ -98,10 +122,10 @@ function updateOne(user, userProps, callback) {
     user.save(function(err, newUser) {
         if(err) {
             logger.error("Could not update user: " + err)
-            callback("Could not update user: " + err, null)
+            return callback("Could not update user: " + err, null)
         }
         else {
-            callback(null, newUser)
+            return callback(null, newUser)
         }
     })
 }
@@ -132,6 +156,7 @@ function deleteOne(userID, callback) {
 module.exports = {
     getUsers,
     findUserBy,
+    getIsAdmin,
     insertOne,
     updateOne,
     deleteOne

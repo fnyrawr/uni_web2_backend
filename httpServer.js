@@ -2,18 +2,20 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const database = require('./database/db')
 
+const app = express()
+app.use(bodyParser.json())
+
 var logger = require('./config/winston')
 
 const publicUserRoutes = require('./endpoints/user/PublicUserRoute')
 const userRoutes = require('./endpoints/user/UserRoute')
+const forumRoutes = require('./endpoints/forum/ForumRoute')
 const authenticationRoutes = require('./endpoints/authentication/AuthenticationRoute')
-
-const app = express()
-app.use(bodyParser.json())
 
 /* Adding Routes */
 app.use('/publicUser', publicUserRoutes)
 app.use('/user', userRoutes)
+app.use('/forum', forumRoutes)
 app.use('/authenticate', authenticationRoutes)
 
 database.initDb(function (err, db) {

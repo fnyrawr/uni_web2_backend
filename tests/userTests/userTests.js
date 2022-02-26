@@ -1,95 +1,110 @@
 const request = require('supertest')
 const app = require('../../httpServer')
 const expect = require('chai').expect
-const should = require('chai').should()
 
-describe("[TEST] Checking response from endpoint", function() {
-    it("Status Code should be 200", function(done) {
+var adminToken = ""
+describe("[TEST] /authenticate - testing login with Basic authentication", function() {
+    it("Trying to create a token using correct credentials", function(done) {
         request(app)
-            .get('/publicUser')
-            .end(function (err, res) {
-                expect(200)
-                if (err) done(err)
-                done()
-            })
-    })
-})
-
-describe("[TEST] Checking if DB is empty", function() {
-    it("No users should be returned", function(done) {
-        request(app)
-            .get('/publicUser')
+            .post('/authenticate')
+            .set('Authorization', 'Basic ' + new Buffer("admin:123").toString("base64"))
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
-                expect([])
-                expect(Object.keys(res.body).length).to.equal(0)
+                expect(res.body.userID).to.equal("admin")
+                adminToken = res.header.authorization
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to use wrong credentials: expecting a 500 status code (error) here", function(done) {
+        request(app)
+            .post('/authenticate')
+            .set('Authorization', 'Basic ' + new Buffer("admin:1234").toString("base64"))
+            .end(function(err, res) {
+                expect(500)
+
                 if(err) done(err)
                 done()
             })
     })
 })
 
-// hashed password to compare changes
-var hashedPW
+describe("[TEST] /user - testing the user endpoint (should only work if authorized and administrator)", function() {
+    it("testing without authorization: expecting a 403 status code (error) here", function(done) {
+        request(app)
+            .get('/user')
+            .end(function(err, res) {
+                expect(res.status).to.equal(403)
 
-describe("[TEST] Tests with admin user", function() {
-    it("Add admin and check properties", function(done) {
-        var adminUser = {
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("testing with authorization: should return one user from the database", function(done) {
+        request(app)
+            .get('/user')
+            .set('Authorization', adminToken)
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(1)
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Add killah247", function(done) {
+        var killah247 = {
+            "userID": "killah247",
+            "userName": "Stefan Stecher",
+            "password": "h4cKm3n0oB"
+        }
+        request(app)
+            .post('/user/')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(killah247)
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    var userToken = ""
+    it("Logging in as Stefan Stecher", function(done) {
+        request(app)
+            .post('/authenticate')
+            .set('Authorization', 'Basic ' + new Buffer("killah247:h4cKm3n0oB").toString("base64"))
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(res.body.userID).to.equal("killah247")
+                userToken = res.header.authorization
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to modify without admin rights should get a 403 status code (error) here", function(done) {
+        var killah247 = {
             "userID": "admin",
-            "userName": "Udo Müller",
-            "password": "123",
-            "isAdministrator": true
+            "userName": "I hacked you",
+            "password": "y0uR3d0nE"
         }
         request(app)
-            .post('/publicUser')
-            .set('content-type', 'application/json')
-            .send(adminUser)
+            .post('/user/')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(killah247)
             .end(function(err, res) {
-                hashedPW = res.body.password
-                expect(200)
+                expect(res.status).to.equal(403)
                 expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("admin")
-                expect(res.body.userName).to.equal("Udo Müller")
-                expect(res.body.isAdministrator).to.equal(true)
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Checking if admin user was added to the database", function(done) {
-        var adminUser = {
-            "userID": "admin"
-        }
-        request(app)
-            .post('/publicUser/getUserByID')
-            .set('content-type', 'application/json')
-            .send(adminUser)
-            .end(function(err, res) {
-                expect(200)
-                expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("admin")
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Checking if hash value of password updates on change", function(done) {
-        var adminUser = {
-            "userID": "admin",
-            "password": "12345"
-        }
-        request(app)
-            .post('/publicUser/')
-            .set('content-type', 'application/json')
-            .send(adminUser)
-            .end(function(err, res) {
-                expect(200)
-                expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("admin")
-                expect(res.body.password).to.be.not.equal(hashedPW)
 
                 if(err) done(err)
                 done()
@@ -97,75 +112,18 @@ describe("[TEST] Tests with admin user", function() {
     })
 })
 
-describe("[TEST] Tests with user manfred", function() {
-    it("Add manfred and check properties", function(done) {
-        var manfred = {
-            "userID": "manfred",
-            "userName": "Manfred Mustermann",
-            "password": "asdf"
+describe("[CLEANUP] Cleaning up database", function() {
+    it("Removing killah247 from database", function(done) {
+        var killah247 = {
+            "userID": "killah247"
         }
         request(app)
-            .post('/publicUser/')
+            .post('/user/deleteUserByID')
+            .set('Authorization', adminToken)
             .set('content-type', 'application/json')
-            .send(manfred)
+            .send(killah247)
             .end(function(err, res) {
-                hashedPW = res.body.password
-                expect(200)
-                expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("manfred")
-                expect(res.body.userName).to.equal("Manfred Mustermann")
-                expect(res.body.isAdministrator).to.equal(false)
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Change name and check properties, hashed password should not have changed", function(done) {
-        var manfred = {
-            "userID": "manfred",
-            "userName": "Manfred Müller"
-        }
-        request(app)
-            .post('/publicUser/')
-            .set('content-type', 'application/json')
-            .send(manfred)
-            .end(function(err, res) {
-                expect(200)
-                expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("manfred")
-                expect(res.body.userName).to.equal("Manfred Müller")
-                expect(res.body.password).to.equal(hashedPW)
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("User count should be 2", function(done) {
-        request(app)
-            .get('/publicUser')
-            .end(function(err, res) {
-                expect(200)
-                expect('content-type', 'application/json; charset=utf-8')
-                expect(Object.keys(res.body).length).to.equal(2)
-                if(err) done(err)
-                done()
-            })
-    })
-})
-
-describe("[TEST] Cleanup operations", function() {
-    it("Removing manfred from database", function(done) {
-        var manfred = {
-            "userID": "manfred"
-        }
-        request(app)
-            .post('/publicUser/deleteUserByID')
-            .set('content-type', 'application/json')
-            .send(manfred)
-            .end(function(err, res) {
-                expect(200)
+                expect(res.status).to.equal(200)
 
                 if(err) done(err)
                 done()
@@ -177,24 +135,13 @@ describe("[TEST] Cleanup operations", function() {
             "userID": "admin"
         }
         request(app)
-            .post('/publicUser/deleteUserByID')
+            .post('/user/deleteUserByID')
+            .set('Authorization', adminToken)
             .set('content-type', 'application/json')
             .send(manfred)
             .end(function(err, res) {
-                expect(200)
+                expect(res.status).to.equal(200)
 
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("User count should be 0", function(done) {
-        request(app)
-            .get('/publicUser')
-            .end(function(err, res) {
-                expect(200)
-                expect('content-type', 'application/json; charset=utf-8')
-                expect(Object.keys(res.body).length).to.equal(0)
                 if(err) done(err)
                 done()
             })
