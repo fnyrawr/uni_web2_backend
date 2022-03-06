@@ -1,5 +1,6 @@
 const Forum = require("./ForumModel")
 const userService = require("../user/UserService")
+const messageService = require("../forumMessage/ForumMessageService")
 var logger = require('../../config/winston')
 
 function getForums(callback) {
@@ -82,13 +83,14 @@ function insertOne(forumProps, user, callback) {
         var newForum = new Forum({
             forumName: forumProps.forumName,
             forumDescription: forumProps.forumDescription,
-            ownerID: forumOwnerID
+            ownerID: forumOwnerID,
+            timestamp: new Date().toLocaleString()
         })
 
         newForum.save(function(err, newForum) {
             if(err) {
-                logger.error("Could not create user: " + err)
-                return callback("Could not create user: " + err, null)
+                logger.error("Could not create forum: " + err)
+                return callback("Could not create forum: " + err, null)
             }
             else {
                 return callback(null, newForum)
@@ -129,25 +131,39 @@ function updateOne(forum, forumProps, user, callback) {
     })
 }
 
-function deleteOne(forumName, callback) {
+function deleteOne(forumName, user, callback) {
     logger.debug("Trying to delete forum with forumName: " + forumName)
 
-    findForumByName(forumName, function(err, forum){
-        if(forum) {
-            forum.remove(function(err) {
-                if(err) {
-                    logger.error("Error while deletion of forum with forumName: " + forumName)
-                    callback("Error while deletion", null)
+    // only delete if user is owner or admin
+    userService.getIsAdmin(user, function (err, adminStatus) {
+        findForumByName(forumName, function(err, forum){
+            if(forum) {
+                if (forum.ownerID === user || adminStatus) {
+                    messageService.deleteMessagesOfForum(forumName, function(err, deleted) {
+                        if(err || !deleted) {
+                            logger.error("Could not delete messages of forum with forumName " + forumName)
+                            return callback(err, null)
+                        }
+                        forum.remove(function (err) {
+                            if (err) {
+                                logger.error("Error while deletion of forum with forumName: " + forumName)
+                                callback("Error while deletion", null)
+                            } else {
+                                callback(null, "Deleted Forum " + forumName)
+                            }
+                        })
+                    })
                 }
                 else {
-                    callback(null, "Deleted Forum")
+                    logger.error("Error: Not enough rights to delete forum " + forumName)
+                    callback("Not enough rights to delete forum " + forumName, null)
                 }
-            })
-        }
-        else {
-            logger.error("Deletion of forum with forumName: " + forumName + " failed: Forum not found")
-            callback("Could not delete forum " + forumName + ": Forum not found", null)
-        }
+            }
+            else {
+                logger.error("Deletion of forum with forumName: " + forumName + " failed: Forum not found")
+                callback("Could not delete forum " + forumName + ": Forum not found", null)
+            }
+        })
     })
 }
 

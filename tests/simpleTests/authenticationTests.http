@@ -24,3 +24,20 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iL
 ###
 POST http://localhost:8080/authenticate/
 Authorization: Basic bWFuZnJlZDphc2Rm
+
+// verify manfred
+###
+http://localhost:8080/signup/confirm/ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmxiV0ZwYkNJNkluUnlZWE5vYldWb1lYSmtRR1Y0YVhOMGFXVnlkQzV1WlhRaUxDSnBZWFFpT2pFMk5EWTBOVFEyTVRnc0ltVjRjQ0k2TVRZME9ERXdORFkzTXpVd04zMC5IdzZUbFhvdjhLcnd0WGdfNDVvRFNDWUVXc3RlRW1WU2VReXUtMzl0NGpR
+
+
+###
+// creating manfred by himself (needs to be verified after that)
+POST http://localhost:8080/signup
+Content-Type: application/json
+
+{
+  "userID": "manfred",
+  "userName": "Manfred Mustermann",
+  "email": "trashmehard@existiert.net",
+  "password": "asdf"
+}

@@ -14,8 +14,8 @@ describe('/authentication and /user endpoint Tests', function() {
     require('./userTests/userTests')
 })
 
-describe('/forum tests', function() {
-    logger.info("Starting automated /forum endpoint tests")
+describe('/forum, /forumMessage and /comment tests', function() {
+    logger.info("Starting automated /forum, /forumMessage and /comment endpoint tests")
     require('./forumTests/forumTests')
 })
 

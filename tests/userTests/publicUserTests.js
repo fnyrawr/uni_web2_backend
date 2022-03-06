@@ -30,7 +30,7 @@ describe("[TEST] Checking if DB is empty", function() {
 })
 
 // hashed password to compare changes
-var hashedPW
+var hashedPW = ""
 
 describe("[TEST] Tests with admin user", function() {
     it("Add admin and check properties", function(done) {
@@ -101,7 +101,9 @@ describe("[TEST] Tests with user manfred", function() {
         var manfred = {
             "userID": "manfred",
             "userName": "Manfred Mustermann",
-            "password": "asdf"
+            "email": "trashmehard@existiert.net",
+            "password": "asdf",
+            "isVerified": "true"
         }
         request(app)
             .post('/publicUser/')

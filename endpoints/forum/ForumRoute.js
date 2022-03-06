@@ -4,7 +4,7 @@ var logger = require('../../config/winston')
 
 var forumService = require("./ForumService")
 var authenticationService = require("../authentication/AuthenticationService")
-const userService = require("../user/UserService");
+const userService = require("../user/UserService")
 
 // get all forums
 router.get('/', function(req, res, next) {
@@ -107,15 +107,19 @@ router.post('/', authenticationService.isAuthenticated, function(req, res, next)
     })
 })
 
-router.post('/deleteForumByName', authenticationService.isAdministrator, function(req, res, next){
-    forumService.deleteOne(req.body.forumName, function(err, result) {
-        if(result) {
-            logger.info("Forum deleted - " + result)
-            res.send(result)
+router.post('/deleteForumByName', authenticationService.isAuthenticated, function(req, res, next){
+    authenticationService.getUserFromToken(req, function(err, user) {
+        if(err) {
+            res.status(500).json({ error: "Could not get User" })
         }
-        else {
-            res.status(500).json({ error: "Could not delete Forum" })
-        }
+        forumService.deleteOne(req.body.forumName, user, function (err, result) {
+            if (result) {
+                logger.info(result)
+                res.send(result)
+            } else {
+                res.status(500).json({error: "Could not delete Forum"})
+            }
+        })
     })
 })
 

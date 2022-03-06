@@ -2,15 +2,15 @@ var express = require('express')
 var router = express.Router()
 var logger = require('../../config/winston')
 
-var forumMessageService = require("./ForumMessageService")
+var commentService = require("./CommentsService")
 var authenticationService = require("../authentication/AuthenticationService")
 const userService = require("../user/UserService")
 
-// get all forum messages
+// get all comments
 router.get('/', authenticationService.isAdministrator, function(req, res, next) {
-    forumMessageService.getForumMessages(function (err, result) {
+    commentService.getComments(function (err, result) {
         if (result) {
-            logger.debug("found messages" + result)
+            logger.debug("found comments" + result)
             return res.send(Object.values(result))
         }
         else {
@@ -20,14 +20,14 @@ router.get('/', authenticationService.isAdministrator, function(req, res, next) 
     })
 })
 
-// get all comments for forumID
-router.post('/getByForumID', authenticationService.isAuthenticated, function(req, res, next) {
-    var forumID = req.body.forumID
+// get all messages for messageTitle
+router.post('/getByMessageTitle', authenticationService.isAuthenticated, function(req, res, next) {
+    var messageTitle = req.body.messageTitle
 
-    if(forumID) {
-        forumMessageService.findMessagesByForumID(forumID, function (err, result) {
-            if(result) {
-                logger.debug("found messages" + result)
+    if(messageTitle) {
+        commentService.findCommentsByMessageTitle(messageTitle, function (err, result) {
+            if (result) {
+                logger.debug("found comments" + result)
                 return res.send(Object.values(result))
             }
             else {
@@ -37,19 +37,19 @@ router.post('/getByForumID', authenticationService.isAuthenticated, function(req
         })
     }
     else {
-        logger.error("Error: no forumID specified")
-        return res.status(500).json({ error: "ForumID not specified" })
+        logger.error("Error: no messageTitle specified")
+        return res.status(500).json({ error: "MessageTitle not specified" })
     }
 })
 
-// get all messages for userID
+// get all comments for userID
 router.post('/getByUserID', authenticationService.isAuthenticated, function(req, res, next) {
     var userID = req.body.userID
 
     if(userID) {
-        forumMessageService.findMessagesByUserID(userID, function (err, result) {
+        commentService.findCommentsByUserID(userID, function (err, result) {
             if (result) {
-                logger.debug("found messages " + result)
+                logger.debug("found comments " + result)
                 return res.send(Object.values(result))
             }
             else {
@@ -65,21 +65,24 @@ router.post('/getByUserID', authenticationService.isAuthenticated, function(req,
 })
 
 router.post('/', authenticationService.isAuthenticated, function(req, res, next) {
-    // try to find message, if exists update, if not create
-    forumMessageService.findMessageByTitle(req.body.messageTitle, function(err, message) {
-        // update message
-        if(message) {
-            logger.debug("Message already exists, trying to update properties")
+    // try to find comment, if exists update, if not create
+    commentService.findComment(req.body.messageTitle, req.body.commentNo, function(err, comment) {
+        if(err) {
+            res.status(500).json({ error: err })
+            return
+        }
+        // update comment
+        if(comment) {
+            logger.debug("Comment already exists, trying to update properties")
             authenticationService.getUserFromToken(req, function(err, user) {
                 userService.getIsAdmin(user, (err, adminStatus) => {
-                    logger.debug("is " + user + " admin? " + adminStatus + " | message author: " + message.authorID)
-                    if(adminStatus === true || message.authorID === user) {
-                        forumMessageService.updateOne(message, req.body, user, function (err, message) {
-                            if (message) {
-                                console.log(JSON.stringify(message))
-                                res.send(message)
+                    if(adminStatus === true || comment.authorID === user) {
+                        commentService.updateOne(comment, req.body, user, function (err, comment) {
+                            if (comment) {
+                                console.log(JSON.stringify(comment))
+                                res.send(comment)
                             } else {
-                                logger.error("Error while updating message: " + err)
+                                logger.error("Error while updating comment: " + err)
                                 res.status(500).json({ error: err })
                             }
                         })
@@ -91,19 +94,19 @@ router.post('/', authenticationService.isAuthenticated, function(req, res, next)
                 })
             })
         }
-        // create message
+        // create comment
         else {
-            logger.debug("Message does not exist yet, creating now")
+            logger.debug("Comment does not exist yet, creating now")
             authenticationService.getUserFromToken(req, function(err, user) {
                 if(err) {
                     res.status(500).json({ error: "Could not get User" })
                 }
-                forumMessageService.insertOne(req.body, user, function (err, message) {
-                    if(message) {
-                        console.log(JSON.stringify(message))
-                        res.send(message)
+                commentService.insertOne(req.body, user, function (err, comment) {
+                    if(comment) {
+                        console.log(JSON.stringify(comment))
+                        res.send(comment)
                     } else {
-                        logger.error("Error while creating message: " + err)
+                        logger.error("Error while creating comment: " + err)
                         res.status(500).json({ error: err })
                     }
                 })
@@ -112,12 +115,12 @@ router.post('/', authenticationService.isAuthenticated, function(req, res, next)
     })
 })
 
-router.post('/deleteMessageByTitle', authenticationService.isAuthenticated, function(req, res, next){
+router.post('/delete', authenticationService.isAuthenticated, function(req, res, next){
     authenticationService.getUserFromToken(req, function(err, user) {
         if(err) {
             res.status(500).json({ error: "Could not get User" })
         }
-        forumMessageService.deleteOne(req.body.messageTitle, user, function (err, result) {
+        commentService.deleteOne(req.body.messageTitle, req.body.commentNo, user, function (err, result) {
             if(err) {
                 logger.warn("Error while deleting message: " + err)
                 res.status(403).json({ error: err })

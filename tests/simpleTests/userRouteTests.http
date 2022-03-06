@@ -31,6 +31,7 @@ Content-Type: application/json
 {
   "userID": "manfred",
   "userName": "Manfred Mustermann",
+  "email": "trashmehard@existiert.net",
   "password": "asdf"
 }
 

@@ -2,9 +2,10 @@ var mongoose = require('mongoose')
 
 const ForumSchema = new mongoose.Schema({
         id: Number,
-        forumName: {type: String, unique: true},
+        forumName: { type: String, unique: true },
         forumDescription: String,
-        ownerID: String
+        ownerID: String,
+        timestamp: String
     }, { timestamps: true }
 );
 

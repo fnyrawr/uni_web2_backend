@@ -57,11 +57,13 @@ describe("[TEST] /user - testing the user endpoint (should only work if authoriz
             })
     })
 
-    it("Add killah247", function(done) {
+    it("Add killah247 by admin", function(done) {
         var killah247 = {
             "userID": "killah247",
             "userName": "Stefan Stecher",
-            "password": "h4cKm3n0oB"
+            "password": "h4cKm3n0oB",
+            "email": "iN00b@trash-me.com",
+            "isVerified": true
         }
         request(app)
             .post('/user/')
@@ -93,7 +95,7 @@ describe("[TEST] /user - testing the user endpoint (should only work if authoriz
     })
 
     it("Trying to modify without admin rights should get a 403 status code (error) here", function(done) {
-        var killah247 = {
+        var modifiedAdmin = {
             "userID": "admin",
             "userName": "I hacked you",
             "password": "y0uR3d0nE"
@@ -101,7 +103,7 @@ describe("[TEST] /user - testing the user endpoint (should only work if authoriz
         request(app)
             .post('/user/')
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send(killah247)
+            .send(modifiedAdmin)
             .end(function(err, res) {
                 expect(res.status).to.equal(403)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -131,14 +133,14 @@ describe("[CLEANUP] Cleaning up database", function() {
     })
 
     it("Removing admin from database", function(done) {
-        var manfred = {
+        var user = {
             "userID": "admin"
         }
         request(app)
             .post('/user/deleteUserByID')
             .set('Authorization', adminToken)
             .set('content-type', 'application/json')
-            .send(manfred)
+            .send(user)
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
 

@@ -1,5 +1,8 @@
 const User = require("./UserModel")
+const Mail = require("../signup/MailingService")
 var logger = require('../../config/winston')
+const config = require("config")
+const jwt = require("jsonwebtoken")
 
 function getUsers(callback) {
     User.find(function (err, users) {
@@ -41,6 +44,9 @@ function findUserBy(searchUserID, callback) {
                         adminUser.password = "123"
                         adminUser.userName = "Default Administrator Account"
                         adminUser.isAdministrator = true
+                        adminUser.isVerified = true
+                        adminUser.email = "admin@existiert.net"
+                        adminUser.confirmationToken = new Buffer(adminUser.email).toString("base64")
 
                         adminUser.save(function(err) {
                             if(err) {
@@ -53,10 +59,31 @@ function findUserBy(searchUserID, callback) {
                         })
                     }
                     else {
-                        logger.warn("Could not find User for userID: " + searchUserID)
+                        logger.debug("Could not find User for userID: " + searchUserID)
                         callback("UserID " + searchUserID + " not found", null)
                     }
                 }
+            }
+        })
+    }
+}
+
+function findUserByEmail(searchUserEmail, callback) {
+    logger.debug("Trying to find email " + searchUserEmail)
+
+    if(!searchUserEmail) {
+        callback("Email is missing", null)
+    }
+    else {
+        var query = User.findOne({ email: searchUserEmail })
+        query.exec(function(err, user) {
+            if(err) {
+                logger.warn("Could not find user for email: " + searchUserEmail)
+                callback("Could not find user for email: " + searchUserEmail, null)
+            }
+            else {
+                logger.debug(`Found email: ${searchUserEmail}`)
+                callback(null, user)
             }
         })
     }
@@ -76,6 +103,7 @@ function getIsAdmin(searchUserID, callback) {
             }
             else {
                 if(user) {
+                    logger.debug(user.userID + " is admin: " + user.isAdministrator)
                     return callback(null, user.isAdministrator)
                 }
                 else {
@@ -87,8 +115,9 @@ function getIsAdmin(searchUserID, callback) {
     }
 }
 
-function insertOne(userProps, callback) {
+function insertOne(userProps, isAdmin, callback) {
     logger.debug("Trying to create a new user.")
+
     var newUser = new User({
         userID: userProps.userID,
         userName: userProps.userName,
@@ -96,18 +125,41 @@ function insertOne(userProps, callback) {
         password: userProps.password
     })
 
-    newUser.save(function(err, newUser) {
-        if(err) {
-            logger.error("Could not create user: " + err)
-            return callback("Could not create user: " + err, null)
+    // only admin can verify users during creation
+    if(isAdmin) {
+        if(userProps.isVerified) {
+            newUser.isVerified = userProps.isVerified
         }
-        else {
-            return callback(null, newUser)
-        }
-    })
+    }
+
+    // only create if required data is given
+    if(newUser.userID && newUser.userName && newUser.email && newUser.password) {
+        // create confirmationToken
+        var issuedAt = new Date().getTime()
+        var expirationTime = config.get('verification.timeout')
+        var expiresAt = issuedAt + (expirationTime * 1000)
+        var privateKey = config.get('verification.tokenKey')
+        newUser.confirmationToken = new Buffer(jwt.sign({ "email": newUser.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
+        newUser.save(function (err, newUser) {
+            if (err) {
+                logger.error("Could not create user: " + err)
+                return callback("Could not create user: " + err, null)
+            } else {
+                // don't send a mail if verified by admin
+                if(!newUser.isVerified) {
+                    Mail.sendConfirmationEmail(newUser.userName, newUser.email, newUser.confirmationToken)
+                }
+                return callback(null, newUser)
+            }
+        })
+    }
+    else {
+        logger.error("Could not create user: missing required attributes")
+        return callback("Could not create user: missing required attributes", null)
+    }
 }
 
-function updateOne(user, userProps, callback) {
+function updateOne(user, userProps, isAdmin, callback) {
     logger.debug("Trying to update user with userID: " + user.userID)
     if(userProps.userName) {
         user.userName = userProps.userName
@@ -117,6 +169,13 @@ function updateOne(user, userProps, callback) {
     }
     if(userProps.password) {
         user.password = userProps.password
+    }
+
+    // only admin can verify users during update
+    if(isAdmin) {
+        if(userProps.isVerified) {
+            user.isVerified = userProps.isVerified
+        }
     }
 
     user.save(function(err, newUser) {
@@ -130,6 +189,33 @@ function updateOne(user, userProps, callback) {
     })
 }
 
+function verifyOne(user, token, callback) {
+    // since issue date etc can vary during tests only take the first 128 characters for comparison which should be equal
+    if(user.confirmationToken.substring(0,128) === token.substring(0,128)) {
+        user.isVerified = true
+        user.save(function (err, verifiedUser) {
+            if (err) {
+                logger.error("Could not update user: " + err)
+                return callback("Could not update user: " + err, null)
+            } else {
+                return callback(null, verifiedUser)
+            }
+        })
+    }
+    else {
+        return("Confirmation tokens do not match", null)
+    }
+}
+
+function checkVerification(user) {
+    if(user.isVerified) {
+        return true
+    }
+    else {
+        return false
+    }
+}
+
 function deleteOne(userID, callback) {
     logger.debug("Trying to delete user with userID: " + userID)
 
@@ -141,7 +227,7 @@ function deleteOne(userID, callback) {
                     callback("Error while deletion", null)
                 }
                 else {
-                    callback(null, "Deleted User")
+                    callback(null, "Deleted User " + userID)
                 }
             })
         }
@@ -152,12 +238,14 @@ function deleteOne(userID, callback) {
     })
 }
 
-
 module.exports = {
     getUsers,
     findUserBy,
+    findUserByEmail,
     getIsAdmin,
     insertOne,
     updateOne,
-    deleteOne
+    verifyOne,
+    deleteOne,
+    checkVerification
 }

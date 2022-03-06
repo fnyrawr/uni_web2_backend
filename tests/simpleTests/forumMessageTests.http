@@ -1,0 +1,60 @@
+// get all messages without token (should be denied)
+###
+http://localhost:8080/forumMessage
+
+// get all messages with user token (should be denied)
+###
+http://localhost:8080/forumMessage
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTkwOTk5NywiZXhwIjoxNjQ3NTU2MjA3NjQxfQ.QAZ9cGJrPaFI7lXDHQI5JqS4w6PVqcBsJG4dJwKJl0c
+
+// get all messages with admin token (should be permitted)
+###
+http://localhost:8080/forumMessage
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU5MDk5NTAsImV4cCI6MTY0NzU1NjE2MDQzMn0.SqrQ3y1XwqMgOeINCcIlVZFOHl53fQSub2CrXFIZwx0
+
+// post a message into Manni's Forum as admin
+###
+POST http://localhost:8080/forumMessage
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+Content-Type: application/json
+
+{
+  "forumID": "Test Forum",
+  "messageTitle": "Welcome Manni",
+  "messageText": "Welcome Manfred to our website. Enjoy your time in our forum."
+}
+
+###
+// post a message into Manni's Forum as user
+###
+POST http://localhost:8080/forumMessage
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTkwOTk5NywiZXhwIjoxNjQ3NTU2MjA3NjQxfQ.QAZ9cGJrPaFI7lXDHQI5JqS4w6PVqcBsJG4dJwKJl0c
+Content-Type: application/json
+
+{
+  "forumID": "Test Forum",
+  "messageTitle": "Thank you Admin",
+  "messageText": "Hi Admin, nice to meet you too. I hope we have a great time here."
+}
+
+###
+// get all messages of a admin with user token
+###
+POST http://localhost:8080/forumMessage/getByUserID
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTkwOTk5NywiZXhwIjoxNjQ3NTU2MjA3NjQxfQ.QAZ9cGJrPaFI7lXDHQI5JqS4w6PVqcBsJG4dJwKJl0c
+Content-Type: application/json
+
+{
+  "userID": "admin"
+}
+
+###
+// get all messages of a forum with user token
+###
+POST http://localhost:8080/forumMessage/getByForumID
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTkwOTk5NywiZXhwIjoxNjQ3NTU2MjA3NjQxfQ.QAZ9cGJrPaFI7lXDHQI5JqS4w6PVqcBsJG4dJwKJl0c
+Content-Type: application/json
+
+{
+  "forumID": "Manni's Forum"
+}

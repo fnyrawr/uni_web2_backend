@@ -3,6 +3,10 @@
     "tokenKey": "hackmeifyoucanbro",
     "timeout": 300
   },
+  "verification": {
+    "tokenKey": "checkYourselfBeforeYouWreckYourself",
+    "timeout": 3600
+  },
   "db": {
     "dbConfigOptions": {
       "useNewUrlParser": true,

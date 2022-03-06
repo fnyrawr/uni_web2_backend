@@ -23,7 +23,7 @@ router.post('/', function(req, res, next) {
         // update user
         if(user) {
             logger.debug("User already exists, trying to update properties")
-            userService.updateOne(user, req.body, function(err, result) {
+            userService.updateOne(user, req.body, true, function(err, result) {
                 if(result) {
                     logger.info("User updated - " + result)
                     res.send(result)
@@ -37,7 +37,7 @@ router.post('/', function(req, res, next) {
         // create user
         else {
             logger.debug("User does not exist yet, creating now")
-            userService.insertOne(req.body, function(err, result) {
+            userService.insertOne(req.body, true, function(err, result) {
                 if(result) {
                     logger.info("User created - " + result)
                     res.send(result)

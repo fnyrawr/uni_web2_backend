@@ -12,10 +12,15 @@ function createSessionToken(props, callback) {
 
     userService.findUserBy(props.userID, function(err, user) {
         if(user) {
+            if(!userService.checkVerification(user)) {
+                logger.warn("User is not verified")
+                callback(user.userName + " is not verified", null, null)
+                return
+            }
             user.comparePassword(props.password, function(err, isMatch) {
                 if(err) {
                     logger.warn("Found user but password is invalid")
-                    callback(err, null)
+                    callback(err, null, null)
                 }
                 else {
                     if(isMatch) {
@@ -31,7 +36,7 @@ function createSessionToken(props, callback) {
                     }
                     else {
                         logger.error("Password or userID is invalid")
-                        callback(err, null)
+                        callback(err, null, null)
                     }
                 }
             })
@@ -54,7 +59,15 @@ function isAuthenticated(req, res, next) {
                 res.status(403).json({ error: "not authorized" })
                 return
             }
-            return next()
+            // return of verify is no user object but only the username in user.user
+            userService.findUserBy(user.user, function(err, user) {
+                logger.debug(JSON.stringify(user))
+                if (userService.checkVerification(user)) {
+                    return next()
+                }
+                logger.warn("User is not verified yet")
+                res.status(403).json({error: "not authorized: Please verify your account first"})
+            })
         })
     } else {
         logger.warn("Error 403: not authorized")
@@ -112,6 +125,8 @@ function getUserFromToken(req, callback) {
         callback("undefined header, cannot identify user", null)
     }
 }
+
+
 
 module.exports = {
     createSessionToken,

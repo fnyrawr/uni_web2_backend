@@ -1,10 +1,10 @@
 var mongoose = require('mongoose')
 
-const ForumMessageSchema = new mongoose.Schema({
+const CommentSchema = new mongoose.Schema({
         id: Number,
-        forumID: String,
-        messageTitle: { type: String, unique: true },
-        messageText: String,
+        messageTitle: String,
+        commentNo: Number,
+        commentText: String,
         authorID: String,
         edited: { type: Boolean, default: false },
         editAuthor: String,
@@ -13,6 +13,6 @@ const ForumMessageSchema = new mongoose.Schema({
     }, { timestamps: true }
 );
 
-const ForumMessage = mongoose.model("ForumMessage", ForumMessageSchema)
+const Comment = mongoose.model("Comment", CommentSchema)
 
-module.exports = ForumMessage;
+module.exports = Comment;

@@ -14,58 +14,113 @@ router.get('/', authenticationService.isAuthenticated, function(req, res, next) 
         }
         else {
             logger.error(err)
-            return res.send(err)
+            res.status(404).json({ error: err })
         }
     })
 })
 
-router.post('/', authenticationService.isAdministrator, function(req, res, next) {
-    // try to find user, if exists update, if not create
-    userService.findUserBy(req.body.userID, function(err, user) {
-        // update user
-        if(user) {
-            logger.debug("User already exists, trying to update properties")
-            userService.updateOne(user, req.body, function(err, user) {
-                if(user) {
-                    const { id, userID, userName, ...partialObject } = user
-                    const subset = { id, userID, userName }
-                    console.log(JSON.stringify(subset))
-                    res.send(subset)
+router.post('/', authenticationService.isAuthenticated, function(req, res, next) {
+    // get requesting username
+    authenticationService.getUserFromToken(req, function(err, requestingUser) {
+        // get the object of the requesting user
+        userService.findUserBy(requestingUser, function (err, requestingUser) {
+            if(err) {
+                logger.error("Could not resolve requesting user: " + err)
+                res.status(404).json({ error: err })
+                return
+            }
+            // try to find user, if exists update, if not create
+            userService.findUserBy(req.body.userID, function (err, user) {
+                if (user) {
+                    logger.debug("User already exists, trying to update properties")
+                    userService.getIsAdmin(requestingUser.userID, function (err, adminStatus) {
+                        if (err) {
+                            logger.error("Error while updating User: " + err)
+                            res.status(404).json({ error: err })
+                            return
+                        }
+                        // update user if requester is the user OR admin
+                        logger.debug(requestingUser.userID)
+                        logger.debug(user.userID)
+                        if (adminStatus || requestingUser.userID === user.userID) {
+                            userService.updateOne(user, req.body, adminStatus, function (err, user) {
+                                if (user) {
+                                    const { id, userID, userName, email, ...partialObject } = user
+                                    const subset = { id, userID, userName, email }
+                                    console.log(JSON.stringify(subset))
+                                    res.send(subset)
+                                } else {
+                                    logger.error("Error while updating User: " + err)
+                                    res.status(500).json({ error: err })
+                                }
+                            })
+                        }
+                        else {
+                            logger.error("Error while updating User: " + err)
+                            res.status(403).json({ error: err })
+                        }
+                    })
                 }
+                // create user (only as admin)
                 else {
-                    logger.error("Error while updating User: " + err)
-                    res.send(err)
+                    logger.debug("User does not exist yet, creating now")
+                    userService.getIsAdmin(requestingUser.userID, function (err, adminStatus) {
+                        if (!adminStatus || err) {
+                            logger.error("Error while creating User: " + err)
+                            res.status(404).json({ error: err })
+                            return
+                        }
+                        userService.insertOne(req.body, adminStatus, function (err, user) {
+                            if (user) {
+                                const {id, userID, userName, email, ...partialObject} = user
+                                const subset = {id, userID, userName, email}
+                                console.log(JSON.stringify(subset))
+                                res.send(subset)
+                            } else {
+                                logger.error("Error while creating User: " + err)
+                                res.status(500).json({ error: err })
+                            }
+                        })
+                    })
                 }
             })
-        }
-        // create user
-        else {
-            logger.debug("User does not exist yet, creating now")
-            userService.insertOne(req.body, function(err, user) {
-                if(user) {
-                    const { id, userID, userName, ...partialObject } = user
-                    const subset = { id, userID, userName }
-                    console.log(JSON.stringify(subset))
-                    res.send(subset)
-                }
-                else {
-                    logger.error("Error while creating User: " + err)
-                    res.send(err)
-                }
-            })
-        }
+        })
     })
 })
 
-router.post('/deleteUserByID', authenticationService.isAdministrator, function(req, res, next){
-    userService.deleteOne(req.body.userID, function(err, result) {
-        if(result) {
-            logger.info("User deleted - " + result)
-            res.send(result)
+router.post('/deleteUserByID', authenticationService.isAuthenticated, function(req, res, next){
+    // delete only if requester is user to be deleted himself or admin
+    authenticationService.getUserFromToken(req, function(err, requestingUser) {
+        if(err) {
+            logger.error("Can't get user from token: " + err)
+            return res.status(404).json({ error: err })
         }
-        else {
-            res.send(err)
-        }
+        userService.findUserBy(requestingUser, function (err, requestingUser) {
+            if(err) {
+                logger.error("Can't find requesting user: " + err)
+                return res.status(404).json({ error: err })
+            }
+            userService.getIsAdmin(requestingUser.userID, function (err, adminStatus) {
+                if(err) {
+                    logger.error("Can't find out if user is admin: " + err)
+                    return res.status(404).json({ error: err })
+                }
+                if (adminStatus || requestingUser.userID === req.body.userID) {
+                    userService.deleteOne(req.body.userID, function (err, result) {
+                        if (result) {
+                            logger.info(result)
+                            res.send(result)
+                        } else {
+                            res.send(err)
+                        }
+                    })
+                }
+                else {
+                    logger.error("Error: Not enough rights")
+                    return res.status(403).json({ error: "Error: Not enough rights" })
+                }
+            })
+        })
     })
 })
 

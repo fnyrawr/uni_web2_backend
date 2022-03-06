@@ -25,19 +25,19 @@ router.post('/', function(req, res, next) {
             res.header("Authorization", "Bearer " + token)
 
             if(user) {
-                const { id, userID, userName, ...partialObject } = user
-                const subset = { id, userID, userName }
+                const { id, userID, userName, email, ...partialObject } = user
+                const subset = { id, userID, userName, email }
                 console.log(JSON.stringify(subset))
                 res.send(subset)
             }
             else {
                 logger.error("User is null, even though a token has been created. Error: " + err)
-                res.send('Unable to map token because user is null')
+                res.status(500).json({ error: err })
             }
         }
         else {
             logger.error("Token has not been created. Error: " + err)
-            res.send('Unable to create token')
+            res.status(403).json({ error: err })
         }
     })
 })

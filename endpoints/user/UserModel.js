@@ -4,13 +4,14 @@ var logger = require('../../config/winston')
 
 const UserSchema = new mongoose.Schema({
     id: Number,
-    userID: {type: String, unique: true},
+    userID: { type: String, unique: true },
     userName: String,
-    email: String,
+    email: { type: String, unique: true },
     password: String,
-    isAdministrator: {type: Boolean, default: false}
-}, { timestamps: true }
-);
+    isAdministrator: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
+    confirmationToken: String
+}, { timestamps: true })
 
 UserSchema.methods.whoAmI = function () {
     var output = this.userID
@@ -24,7 +25,7 @@ UserSchema.pre('save', function (next) {
 
     logger.debug("Pre-save " + this.password + " change: " + this.isModified('password'))
 
-    if(!user.isModified('password')) { return next() };
+    if(!user.isModified('password')) { return next() }
     bcrypt.hash(user.password, 10).then((hashedPassword) => {
         user.password = hashedPassword
         next()
@@ -44,4 +45,4 @@ UserSchema.methods.comparePassword = function (candidatePassword, next) {
 
 const User = mongoose.model("User", UserSchema)
 
-module.exports = User;
+module.exports = User

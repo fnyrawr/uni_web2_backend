@@ -10,13 +10,19 @@ var logger = require('./config/winston')
 const publicUserRoutes = require('./endpoints/user/PublicUserRoute')
 const userRoutes = require('./endpoints/user/UserRoute')
 const forumRoutes = require('./endpoints/forum/ForumRoute')
+const forumMessageRoutes = require('./endpoints/forumMessage/ForumMessageRoute')
+const commentRoutes = require('./endpoints/comments/CommentsRoute')
 const authenticationRoutes = require('./endpoints/authentication/AuthenticationRoute')
+const signupRoutes = require('./endpoints/signup/SignupRoute')
 
 /* Adding Routes */
 app.use('/publicUser', publicUserRoutes)
 app.use('/user', userRoutes)
 app.use('/forum', forumRoutes)
+app.use('/forumMessage', forumMessageRoutes)
+app.use('/comment', commentRoutes)
 app.use('/authenticate', authenticationRoutes)
+app.use('/signup', signupRoutes)
 
 database.initDb(function (err, db) {
     if(db) {
