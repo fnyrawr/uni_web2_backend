@@ -1,15 +1,31 @@
 const express = require('express')
+const cors = require('cors')
 const bodyParser = require('body-parser')
 const database = require('./database/db')
 
 const app = express()
+app.use('*', cors({
+    exposedHeaders: ['*']
+}))
+
+app.use(cors({
+    exposedHeaders: ['Authorization']
+}))
+
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*")
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+    res.header("Access-Control-Expose-Headers","Authorization")
+    next()
+})
+
 app.use(bodyParser.json())
 
 var logger = require('./config/winston')
 
 const publicUserRoutes = require('./endpoints/user/PublicUserRoute')
 const userRoutes = require('./endpoints/user/UserRoute')
-const forumRoutes = require('./endpoints/forum/ForumRoute')
+const forumRoutes = require('./endpoints/forumThreads/ForumThreadRoute')
 const forumMessageRoutes = require('./endpoints/forumMessage/ForumMessageRoute')
 const commentRoutes = require('./endpoints/comments/CommentsRoute')
 const authenticationRoutes = require('./endpoints/authentication/AuthenticationRoute')
@@ -17,10 +33,10 @@ const signupRoutes = require('./endpoints/signup/SignupRoute')
 
 /* Adding Routes */
 app.use('/publicUser', publicUserRoutes)
-app.use('/user', userRoutes)
-app.use('/forum', forumRoutes)
-app.use('/forumMessage', forumMessageRoutes)
-app.use('/comment', commentRoutes)
+app.use('/users', userRoutes)
+app.use('/forumThreads', forumRoutes)
+app.use('/forumMessages', forumMessageRoutes)
+app.use('/comments', commentRoutes)
 app.use('/authenticate', authenticationRoutes)
 app.use('/signup', signupRoutes)
 

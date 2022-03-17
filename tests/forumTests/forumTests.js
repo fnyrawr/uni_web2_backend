@@ -6,15 +6,14 @@ const expect = require('chai').expect
 
 var adminToken = ""
 var userToken = ""
-describe("[PREP] creating users and generating their tokens for forum tests", function() {
+describe("[PREP] creating users and generating their tokens for forumThreads tests", function() {
     it("Creating token for admin", function(done) {
         request(app)
             .post('/authenticate')
-            .set('Authorization', 'Basic ' + new Buffer("admin:123").toString("base64"))
+            .set('Authorization', 'Basic ' + Buffer.from("admin:123").toString("base64"))
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("admin")
                 adminToken = res.header.authorization
 
                 if(err) done(err)
@@ -35,13 +34,13 @@ describe("[PREP] creating users and generating their tokens for forum tests", fu
         var expirationTime = config.get('verification.timeout')
         var expiresAt = issuedAt + (expirationTime * 1000)
         var privateKey = config.get('verification.tokenKey')
-        confirmationToken = new Buffer(jwt.sign({ "email": "trashmehard@existiert.net" }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
+        confirmationToken = Buffer.from(jwt.sign({ "email": "trashmehard@existiert.net" }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
         request(app)
             .post('/signup')
             .set({ 'content-type': 'application/json' })
             .send(manfred)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                expect(res.status).to.equal(201)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -52,7 +51,7 @@ describe("[PREP] creating users and generating their tokens for forum tests", fu
     it("Try to create a token for manfred (not verified yet) - expecting 403 status code (error) here", function(done) {
         request(app)
             .post('/authenticate')
-            .set('Authorization', 'Basic ' + new Buffer("manfred:asdf").toString("base64"))
+            .set('Authorization', 'Basic ' + Buffer.from("manfred:asdf").toString("base64"))
             .end(function(err, res) {
                 expect(403)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -79,11 +78,10 @@ describe("[PREP] creating users and generating their tokens for forum tests", fu
     it("Creating token for manfred", function(done) {
         request(app)
             .post('/authenticate')
-            .set('Authorization', 'Basic ' + new Buffer("manfred:asdf").toString("base64"))
+            .set('Authorization', 'Basic ' + Buffer.from("manfred:asdf").toString("base64"))
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("manfred")
                 userToken = res.header.authorization
 
                 if(err) done(err)
@@ -91,12 +89,12 @@ describe("[PREP] creating users and generating their tokens for forum tests", fu
             })
     })
 
-    it("Try to verify manfred with confirmationToken for a 2nd time - should throw a 500 status code (error) here", function(done) {
+    it("Try to verify manfred with confirmationToken for a 2nd time - should throw a 400 status code (bad request) here", function(done) {
         request(app)
             .get('/signup/confirm/' + confirmationToken)
             .set({ 'content-type': 'application/json' })
             .end(function(err, res) {
-                expect(res.status).to.equal(500)
+                expect(res.status).to.equal(400)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -105,10 +103,11 @@ describe("[PREP] creating users and generating their tokens for forum tests", fu
     })
 })
 
-describe("[TEST] Testing forum functionalities", function() {
+var testForumID = ""
+describe("[TEST] Testing forumThreads functionalities", function() {
     it("Get all Forums (should be none right now)", function(done) {
         request(app)
-            .get('/forum')
+            .get('/forumThreads')
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -119,18 +118,19 @@ describe("[TEST] Testing forum functionalities", function() {
             })
     })
 
-    it("Add forum owned by admin", function(done) {
+    it("Add forumThread owned by admin", function(done) {
         var adminForum = {
-            "forumName": "Test Forum",
-            "forumDescription": "Forum created by admin for testing purposes",
+            "name": "Test Forum",
+            "description": "Forum created by admin for testing purposes",
             "ownerID": "admin"
         }
         request(app)
-            .post('/forum/')
+            .post('/forumThreads/')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(adminForum)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                testForumID = res.body._id
+                expect(res.status).to.equal(201)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.ownerID).to.equal("admin")
 
@@ -141,7 +141,7 @@ describe("[TEST] Testing forum functionalities", function() {
 
     it("Get all Forums (should be 1 right now)", function(done) {
         request(app)
-            .get('/forum')
+            .get('/forumThreads')
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -152,14 +152,14 @@ describe("[TEST] Testing forum functionalities", function() {
             })
     })
 
-    it("Try to modify admin forum with user token - should throw 403 status code (error)", function(done) {
+    it("Try to modify admin forumThreads with user token - should throw 403 status code (error)", function(done) {
         var adminForum = {
-            "forumName": "Test Forum",
-            "forumDescription": "Here is Manni",
+            "name": "Test Forum",
+            "description": "Here is Manni",
             "ownerID": "manfred"
         }
         request(app)
-            .post('/forum/')
+            .put('/forumThreads/' + testForumID)
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(adminForum)
             .end(function(err, res) {
@@ -171,17 +171,17 @@ describe("[TEST] Testing forum functionalities", function() {
             })
     })
 
-    it("Modify admin forum: Change ownership to manfred", function(done) {
+    it("Modify admin forumThreads: Change ownership to manfred", function(done) {
         var adminForum = {
-            "forumName": "Test Forum",
+            "name": "Test Forum",
             "ownerID": "manfred"
         }
         request(app)
-            .post('/forum/')
+            .put('/forumThreads/' + testForumID)
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(adminForum)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                expect(res.status).to.equal(201)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.ownerID).to.equal("manfred")
 
@@ -190,18 +190,18 @@ describe("[TEST] Testing forum functionalities", function() {
             })
     })
 
-    it("Try to modify the same forum with user token - should work now\nalthough the owner is set to manfred since he can't transfer ownership as non-admin user", function(done) {
+    it("Try to modify the same forumThreads with user token - should work now\nalthough the owner is set to manfred since he can't transfer ownership as non-admin user", function(done) {
         var adminForum = {
-            "forumName": "Test Forum",
-            "forumDescription": "Here is Manni",
+            "name": "Test Forum",
+            "description": "Here is Manni",
             "ownerID": "killah247"
         }
         request(app)
-            .post('/forum/')
+            .put('/forumThreads/' + testForumID)
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(adminForum)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                expect(res.status).to.equal(201)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.ownerID).to.equal("manfred")
 
@@ -210,11 +210,11 @@ describe("[TEST] Testing forum functionalities", function() {
             })
     })
 
-    it("Try to get Forums by ownerID without token", function(done) {
+    it("Try to get myForums by ownerID without token", function(done) {
         request(app)
-            .get('/forum/getByOwnerID')
+            .get('/forumThreads/myForums')
             .end(function(err, res) {
-                expect(res.status).to.equal(403)
+                expect(res.status).to.equal(200)
 
                 if(err) done(err)
                 done()
@@ -223,7 +223,7 @@ describe("[TEST] Testing forum functionalities", function() {
 
     it("Get all Forums of manfred with his userToken", function(done) {
         request(app)
-            .get('/forum/getByOwnerID')
+            .get('/forumThreads/myForums')
             .set('Authorization', userToken)
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
@@ -240,9 +240,8 @@ describe("[TEST] Testing forum functionalities", function() {
             "ownerID": "manfred"
         }
         request(app)
-            .post('/forum/getByOwnerID')
+            .get('/forumThreads/?ownerID="manfred"')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
-            .send(manfred)
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -254,33 +253,40 @@ describe("[TEST] Testing forum functionalities", function() {
     })
 })
 
-describe("[TEST] Testing forum message functionalities", function() {
-    it("get all messages without token (should be denied)", function(done) {
+var message1ID = ""
+var message2ID = ""
+var message3ID = ""
+describe("[TEST] Testing forumMessage functionalities", function() {
+    it("get all messages without token", function(done) {
         request(app)
-            .get('/forumMessage')
+            .get('/forumMessages')
             .end(function (err, res) {
-                expect(res.status).to.equal(403)
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(0)
 
                 if (err) done(err)
                 done()
             })
     })
 
-    it("get all messages with user token (should be denied)", function(done) {
+    it("get all messages with user token", function(done) {
         request(app)
-            .get('/forumMessage')
+            .get('/forumMessages')
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .end(function (err, res) {
-                expect(res.status).to.equal(403)
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(0)
 
                 if (err) done(err)
                 done()
             })
     })
 
-    it("get all messages with admin token (should be permitted but no messages yet)", function(done) {
+    it("get all messages with admin token", function(done) {
         request(app)
-            .get('/forumMessage')
+            .get('/forumMessages')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .end(function (err, res) {
                 expect(res.status).to.equal(200)
@@ -293,17 +299,18 @@ describe("[TEST] Testing forum message functionalities", function() {
     })
 
     it("Create a message with adminToken", function(done) {
-        var message = {
-            "forumID": "Test Forum",
-            "messageTitle": "Welcome Manni",
-            "messageText": "Welcome Manfred to our website. Enjoy your time in our forum."
+        var adminMessage = {
+            "forumThreadID": testForumID,
+            "title": "Welcome Manni",
+            "text": "Welcome Manfred to our website. Enjoy your time in our forumThreads."
         }
         request(app)
-            .post('/forumMessage')
+            .post('/forumMessages')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
-            .send(message)
+            .send(adminMessage)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                message1ID = res.body._id
+                expect(res.status).to.equal(201)
 
                 if(err) done(err)
                 done()
@@ -311,17 +318,18 @@ describe("[TEST] Testing forum message functionalities", function() {
     })
 
     it("Create a message with userToken", function(done) {
-        var message = {
-            "forumID": "Test Forum",
-            "messageTitle": "Thank you Admin",
-            "messageText": "Hi Admin, nice to meet you too."
+        var userMessage = {
+            "forumThreadID": testForumID,
+            "title": "Thank you Admin",
+            "text": "Hi Admin, nice to meet you too."
         }
         request(app)
-            .post('/forumMessage')
+            .post('/forumMessages')
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send(message)
+            .send(userMessage)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                message2ID = res.body._id
+                expect(res.status).to.equal(201)
 
                 if(err) done(err)
                 done()
@@ -330,16 +338,16 @@ describe("[TEST] Testing forum message functionalities", function() {
 
     it("Edit a message with userToken", function(done) {
         var message = {
-            "forumID": "Test Forum",
-            "messageTitle": "Thank you Admin",
-            "messageText": "Hi Admin, nice to meet you too. I hope I can have a great time here."
+            "forumThreadID": testForumID,
+            "title": "Thank you Admin",
+            "text": "Hi Admin, nice to meet you too. I hope I can have a great time here."
         }
         request(app)
-            .post('/forumMessage')
+            .put('/forumMessages/' + message2ID)
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(message)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                expect(res.status).to.equal(201)
 
                 if(err) done(err)
                 done()
@@ -348,16 +356,16 @@ describe("[TEST] Testing forum message functionalities", function() {
 
     it("Edit a user message with adminToken (moderation test)", function(done) {
         var message = {
-            "forumID": "Test Forum",
-            "messageTitle": "Thank you Admin",
-            "messageText": "Hi Admin, nice to meet you too. I hope WE have a great time here. ;)"
+            "forumThreadID": testForumID,
+            "title": "Thank you Admin",
+            "text": "Hi Admin, nice to meet you too. I hope WE have a great time here. ;)"
         }
         request(app)
-            .post('/forumMessage')
+            .put('/forumMessages/' + message2ID)
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(message)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                expect(res.status).to.equal(201)
 
                 if(err) done(err)
                 done()
@@ -366,16 +374,17 @@ describe("[TEST] Testing forum message functionalities", function() {
 
     it("Another user message for testing purposes", function(done) {
         var message = {
-            "forumID": "Test Forum",
-            "messageTitle": "What is it about?",
-            "messageText": "By the way, what is this Forum actually good for?"
+            "forumThreadID": testForumID,
+            "title": "What is it about",
+            "text": "By the way, what is this Forum actually good for?"
         }
         request(app)
-            .post('/forumMessage')
+            .post('/forumMessages')
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(message)
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                message3ID = res.body._id
+                expect(res.status).to.equal(201)
 
                 if(err) done(err)
                 done()
@@ -384,7 +393,7 @@ describe("[TEST] Testing forum message functionalities", function() {
 
     it("get all messages with admin token (should be 3 messages now)", function(done) {
         request(app)
-            .get('/forumMessage')
+            .get('/forumMessages')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .end(function (err, res) {
                 expect(res.status).to.equal(200)
@@ -398,7 +407,7 @@ describe("[TEST] Testing forum message functionalities", function() {
 
     it("get all messages of manfred (should be 2 messages now)", function(done) {
         request(app)
-            .post('/forumMessage/getByUserID')
+            .get('/forumMessages/?authorID="manfred"')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send({ userID: "manfred" })
             .end(function (err, res) {
@@ -411,11 +420,10 @@ describe("[TEST] Testing forum message functionalities", function() {
             })
     })
 
-    it("delete message What is it about? with user token (owner is manfred)", function(done) {
+    it("delete message What is it about with user token (owner is manfred)", function(done) {
         request(app)
-            .post('/forumMessage/deleteMessageByTitle')
+            .delete('/forumMessages/' + message3ID)
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send({ messageTitle: "What is it about?" })
             .end(function (err, res) {
                 expect(res.status).to.equal(200)
 
@@ -426,9 +434,8 @@ describe("[TEST] Testing forum message functionalities", function() {
 
     it("delete message Welcome Manni with user token (owner is admin) - expecting 403 status code (error) here", function(done) {
         request(app)
-            .post('/forumMessage/deleteMessageByTitle')
+            .delete('/forumMessages/' + message1ID)
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send({ messageTitle: "Welcome Manni" })
             .end(function (err, res) {
                 expect(res.status).to.equal(403)
 
@@ -439,9 +446,8 @@ describe("[TEST] Testing forum message functionalities", function() {
 
     it("get all messages of Test Forum (should be 2 messages now)", function(done) {
         request(app)
-            .post('/forumMessage/getByForumID')
+            .get('/forumMessages/?forumThreadID=' + testForumID)
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
-            .send({ forumID: "Test Forum" })
             .end(function (err, res) {
                 expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -453,6 +459,7 @@ describe("[TEST] Testing forum message functionalities", function() {
     })
 })
 
+/*
 describe("[TEST] Testing comment functionalities", function() {
     it("Comment on message Welcome Manni as manfred", function(done) {
         var message = {
@@ -566,17 +573,14 @@ describe("[TEST] Testing comment functionalities", function() {
             })
     })
 })
+*/
 
 describe("[CLEANUP] Cleaning up database", function() {
-    it("Removing test forum from database", function(done) {
-        var testForum = {
-            "forumName": "Test Forum"
-        }
+    it("Removing test forumThreads from database", function(done) {
         request(app)
-            .post('/forum/deleteForumByName')
+            .delete('/forumThreads/' + testForumID)
             .set('Authorization', adminToken)
             .set('content-type', 'application/json')
-            .send(testForum)
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
 
@@ -587,7 +591,7 @@ describe("[CLEANUP] Cleaning up database", function() {
 
     it("get all forums (should be 0 now)", function(done) {
         request(app)
-            .get('/forum')
+            .get('/forumThreads')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .end(function (err, res) {
                 expect(res.status).to.equal(200)
@@ -599,9 +603,9 @@ describe("[CLEANUP] Cleaning up database", function() {
             })
     })
 
-    it("checking if messages got deleted with the forum aswell", function(done) {
+    it("checking if messages got deleted with the forumThreads aswell", function(done) {
         request(app)
-            .post('/forumMessage/getByForumID')
+            .get('/forumMessages/')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send({ forumID: "Test Forum" })
             .end(function (err, res) {
@@ -614,9 +618,9 @@ describe("[CLEANUP] Cleaning up database", function() {
             })
     })
 
-    it("checking if comments got deleted with the forum and messages aswell", function(done) {
+    it("checking if comments got deleted with the forumThreads and messages aswell", function(done) {
         request(app)
-            .get('/comment')
+            .get('/comments')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .end(function (err, res) {
                 expect(res.status).to.equal(200)
@@ -629,14 +633,10 @@ describe("[CLEANUP] Cleaning up database", function() {
     })
 
     it("Removing manfred from database", function(done) {
-        var manfred = {
-            "userID": "manfred"
-        }
         request(app)
-            .post('/user/deleteUserByID')
+            .delete('/users/manfred')
             .set('Authorization', adminToken)
             .set('content-type', 'application/json')
-            .send(manfred)
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
 
@@ -646,14 +646,10 @@ describe("[CLEANUP] Cleaning up database", function() {
     })
 
     it("Removing admin from database", function(done) {
-        var admin = {
-            "userID": "admin"
-        }
         request(app)
-            .post('/user/deleteUserByID')
+            .delete('/users/admin')
             .set('Authorization', adminToken)
             .set('content-type', 'application/json')
-            .send(admin)
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
 

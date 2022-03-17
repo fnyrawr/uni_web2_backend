@@ -2,7 +2,7 @@ const Comments = require("./CommentsModel")
 const userService = require("../user/UserService")
 var logger = require('../../config/winston')
 
-// Admin-Function: getting ALL forum comments regardless of forums
+// Admin-Function: getting ALL forumThreads comments regardless of forums
 function getComments(callback) {
     Comments.find(function (err, comments) {
         if(err) {

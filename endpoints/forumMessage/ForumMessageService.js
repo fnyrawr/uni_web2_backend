@@ -3,9 +3,10 @@ const userService = require("../user/UserService")
 const commentService = require("../comments/CommentsService")
 var logger = require('../../config/winston')
 
-// Admin-Function: getting ALL forum messages regardless of forums
-function getForumMessages(callback) {
-    Messages.find(function (err, forums) {
+// Admin-Function: getting ALL forumThreads messages regardless of forums
+function getForumMessages(filters, callback) {
+    var query = Messages.find(filters)
+    query.exec(function (err, forums) {
         if(err) {
             logger.error("Error while searching: " + err)
             return callback(err, null)
@@ -17,56 +18,28 @@ function getForumMessages(callback) {
     })
 }
 
-// find messages belonging to a forum
-function findMessagesByForumID(searchForumID, callback) {
-    logger.debug("Trying to find messages for forumID " + searchForumID)
+// find messages belonging to a forumThreads
+function findMessagesByForumThreadID(forumThreadID, callback) {
+    logger.debug("Trying to find messages for forumID " + forumThreadID)
 
-    if(!searchForumID) {
+    if(!forumThreadID) {
         callback("forumID is missing")
     }
     else {
-        var query = Messages.find({ forumID: searchForumID })
+        var query = Messages.find({ forumThreadID: forumThreadID })
         query.exec(function(err, messages) {
             if(err) {
-                logger.warn("Could not find messages for forumID: " + searchForumID)
-                callback("Could not find messages for forumID: " + searchForumID, null)
+                logger.warn("Could not find messages for forumID: " + forumThreadID)
+                callback("Could not find messages for forumID: " + forumThreadID, null)
             }
             else {
                 if(messages) {
-                    logger.debug(`Found forumID: ${searchForumID}`)
+                    logger.debug(`Found forumID: ${ forumThreadID }`)
                     callback(null, messages)
                 }
                 else {
-                    logger.warn("Could not find messages for forumID: " + searchForumID)
-                    callback("ForumID " + searchForumID + " not found", null)
-                }
-            }
-        })
-    }
-}
-
-// find messages belonging to a user
-function findMessagesByUserID(searchUserID, callback) {
-    logger.debug("Trying to find messages for userID " + searchUserID)
-
-    if(!searchUserID) {
-        callback("userID is missing")
-    }
-    else {
-        var query = Messages.find({ authorID: searchUserID })
-        query.exec(function(err, forum) {
-            if(err) {
-                logger.warn("Could not find messages for userID: " + searchUserID)
-                callback("Could not find messages for userID: " + searchUserID, null)
-            }
-            else {
-                if(forum) {
-                    logger.debug(`Found userID: ${searchUserID}`)
-                    callback(null, forum)
-                }
-                else {
-                    logger.warn("Could not find messages for userID: " + searchUserID)
-                    callback("UserID " + searchUserID + " not found", null)
+                    logger.warn("Could not find messages for forumID: " + forumThreadID)
+                    callback("ForumID " + forumThreadID + " not found", null)
                 }
             }
         })
@@ -81,7 +54,7 @@ function findMessageByTitle(searchMessageTitle, callback) {
         callback("messageTitle is missing")
     }
     else {
-        var query = Messages.findOne({ messageTitle: searchMessageTitle })
+        var query = Messages.findOne({ title: searchMessageTitle })
         query.exec(function(err, message) {
             if(err) {
                 logger.warn("Could not find message for messageTitle: " + searchMessageTitle)
@@ -89,7 +62,7 @@ function findMessageByTitle(searchMessageTitle, callback) {
             }
             else {
                 if(message) {
-                    logger.debug(`Found messageTitle: ${searchMessageTitle}`)
+                    logger.debug(`Found messageTitle: ${ searchMessageTitle }`)
                     callback(null, message)
                 }
                 else {
@@ -101,21 +74,49 @@ function findMessageByTitle(searchMessageTitle, callback) {
     }
 }
 
+// find message by title
+function findMessageByID(searchMessageID, callback) {
+    logger.debug("Trying to find messages for id " + searchMessageID)
+
+    if(!searchMessageID) {
+        callback("id is missing")
+    }
+    else {
+        var query = Messages.findOne({ _id: searchMessageID })
+        query.exec(function(err, message) {
+            if(err) {
+                logger.warn("Could not find message for id: " + searchMessageID)
+                callback("Could not find message for id: " + searchMessageID, null)
+            }
+            else {
+                if(message) {
+                    logger.debug(`Found id: ${ searchMessageID }`)
+                    callback(null, message)
+                }
+                else {
+                    logger.debug("Could not find message for id: " + searchMessageID)
+                    callback("id " + searchMessageID + " not found", null)
+                }
+            }
+        })
+    }
+}
+
 function insertOne(messageProps, user, callback) {
     logger.debug("Trying to create a new message")
     // set owner according to props only if requester is admin, otherwise owner is user
     var authorID = user
-    var forumID = messageProps.forumID
-    var messageTitle = messageProps.messageTitle
-    var messageText = messageProps.messageText
+    var forumThreadID = messageProps.forumThreadID
+    var title = messageProps.title
+    var text = messageProps.text
     var timestamp = new Date().toLocaleString()
 
     // only create if all required properties are given
-    if(forumID && messageTitle && messageText) {
+    if(forumThreadID && title && text && authorID) {
         var newMessage = new Messages({
-            forumID: forumID,
-            messageTitle: messageTitle,
-            messageText: messageText,
+            forumThreadID: forumThreadID,
+            title: title,
+            text: text,
             authorID: authorID,
             creationTimestamp: timestamp
         })
@@ -136,7 +137,7 @@ function insertOne(messageProps, user, callback) {
 }
 
 function updateOne(message, messageProps, user, callback) {
-    logger.debug("Trying to update message with messageTitle: " + message.messageTitle)
+    logger.debug("Trying to update message with messageTitle: " + message.title)
     // set author according to props only if requester is admin, otherwise author is user
     userService.getIsAdmin(user, (err, adminStatus) => {
         var timestamp = new Date().toLocaleString()
@@ -144,12 +145,12 @@ function updateOne(message, messageProps, user, callback) {
         // add note to message if edited by admin
         var adminEdit = false
         if(user != message.authorID && adminStatus) {
-            logger.info("Message " + message.messageTitle + " of user " + message.authorID + " edited by admin " + user)
+            logger.info("Message " + message.title + " of user " + message.authorID + " edited by admin " + user)
             adminEdit = true
         }
 
         if(message && (!(user != message.authorID) || adminEdit)) {
-            message.messageText = messageProps.messageText
+            message.text = messageProps.text
             message.edited = true
             message.editAuthor = user
             message.editTimestamp = timestamp
@@ -170,42 +171,26 @@ function updateOne(message, messageProps, user, callback) {
     })
 }
 
-function deleteOne(messageTitle, user, callback) {
-    logger.debug("Trying to delete message with messageTitle: " + messageTitle)
+function deleteOne(message, callback) {
+    logger.debug("Trying to delete message with messageTitle: " + message.title)
 
-    // only delete if user is author or admin
-    userService.getIsAdmin(user, (err, adminStatus) => {
-        findMessageByTitle(messageTitle, function (err, message) {
-            if(message) {
-                if(message.authorID === user || adminStatus) {
-                    commentService.deleteCommentsOfMessage(messageTitle, function(err, deleted) {
-                        if(err || !deleted) {
-                            logger.error("Could not delete comments of message with messageTitle " + messageTitle)
-                            return callback(err, null)
-                        }
-                        message.remove(function (err) {
-                            if (err) {
-                                logger.error("Error while deletion of message with messageTitle: " + messageTitle)
-                                callback("Error while deletion", null)
-                            } else {
-                                callback(null, "Deleted message " + messageTitle)
-                            }
-                        })
-                    })
-                }
-                else {
-                    logger.warn("Error: Not enough rights to delete message " + messageTitle)
-                    callback("Not enough rights to delete message " + messageTitle, null)
-                }
+    commentService.deleteCommentsOfMessage(message._id, function(err, deleted) {
+        if(err || !deleted) {
+            logger.error("Could not delete comments of message with messageTitle " + message.title)
+            return callback(err, null)
+        }
+        message.remove(function (err) {
+            if (err) {
+                logger.error("Error while deletion of message with messageTitle: " + message.title)
+                callback("Error while deletion", null)
             } else {
-                logger.error("Deletion of message with messageTitle: " + messageTitle + " failed: Message not found")
-                callback("Could not delete message " + messageTitle + ": Message not found", null)
+                callback(null, true)
             }
         })
     })
 }
 
-// deleting all messages from a forumID (used in process of forum deletion)
+// deleting all messages from a forumID (used in process of forumThreads deletion)
 function deleteMessagesOfForum(searchForumID, callback) {
     logger.debug("Trying to delete all messages for forumID " + searchForumID)
 
@@ -213,20 +198,20 @@ function deleteMessagesOfForum(searchForumID, callback) {
         return callback("messageTitle is missing", false)
     }
     else {
-        findMessagesByForumID(searchForumID, function(err, messages) {
+        findMessagesByForumThreadID(searchForumID, function(err, messages) {
             if(err) {
                 return callback("error while trying to find messages", false)
             }
             // delete all comments belonging to the messages first before deleting the messages themselves
             messages.forEach(message => {
-                commentService.deleteCommentsOfMessage(message.messageTitle, function(err, deleted) {
+                commentService.deleteCommentsOfMessage(message._id, function(err, deleted) {
                     if(err || !deleted) {
-                        logger.warn("Error while deleting comments of message " + message.messageTitle + ": " + err)
+                        logger.warn("Error while deleting comments of message " + message._id + ": " + err)
                     }
                 })
             })
             // delete the actual messages now
-            var query = Messages.deleteMany({ forumID: searchForumID })
+            var query = Messages.deleteMany({ forumThreadID: searchForumID })
             query.exec(function(err, message) {
                 if(err) {
                     logger.warn("Could not find messages for forumID: " + searchForumID)
@@ -243,9 +228,9 @@ function deleteMessagesOfForum(searchForumID, callback) {
 
 module.exports = {
     getForumMessages,
-    findMessagesByForumID,
-    findMessagesByUserID,
+    findMessagesByForumThreadID,
     findMessageByTitle,
+    findMessageByID,
     insertOne,
     updateOne,
     deleteOne,

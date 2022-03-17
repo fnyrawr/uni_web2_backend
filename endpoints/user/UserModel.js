@@ -1,9 +1,8 @@
 var mongoose = require('mongoose')
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcryptjs')
 var logger = require('../../config/winston')
 
 const UserSchema = new mongoose.Schema({
-    id: Number,
     userID: { type: String, unique: true },
     userName: String,
     email: { type: String, unique: true },

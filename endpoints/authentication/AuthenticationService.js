@@ -55,23 +55,30 @@ function isAuthenticated(req, res, next) {
         var privateKey = config.get('session.tokenKey')
         jwt.verify(token, privateKey, { algorithm: "HS256" }, (err, user) => {
             if(err) {
-                logger.warn("Error 403: not authorized")
-                res.status(403).json({ error: "not authorized" })
+                logger.warn("Error 401: not authorized - " + err)
+                res.status(401).json({ error: "not authorized" })
                 return
             }
             // return of verify is no user object but only the username in user.user
             userService.findUserBy(user.user, function(err, user) {
-                logger.debug(JSON.stringify(user))
-                if (userService.checkVerification(user)) {
-                    return next()
+                if(err) {
+                    logger.warn("Error 401: not authorized - " + err)
+                    res.status(401).json({ error: "not authorized: could not find user to authorize" })
                 }
-                logger.warn("User is not verified yet")
-                res.status(403).json({error: "not authorized: Please verify your account first"})
+                else {
+                    logger.debug(JSON.stringify(user))
+                    if (userService.checkVerification(user)) {
+                        return next()
+                    }
+                    logger.warn("User is not verified yet")
+                    res.status(401).json({ error: "not authorized: Please verify your account first" })
+                }
             })
         })
-    } else {
-        logger.warn("Error 403: not authorized")
-        res.status(403).json({ error: "not authorized" })
+    }
+    else {
+        logger.warn("Error 401: not authorized")
+        res.status(401).json({ error: "not authorized" })
     }
 }
 
@@ -82,28 +89,28 @@ function isAdministrator(req, res, next) {
         var privateKey = config.get('session.tokenKey')
         jwt.verify(token, privateKey, { algorithm: "HS256" }, (err, user) => {
             if (err) {
-                logger.warn('403: not authorized')
-                res.status(403).json({ error: "not authorized" })
+                logger.warn('401: not authorized')
+                res.status(401).json({ error: "not authorized" })
                 return
             }
             userService.getIsAdmin(user.user, function(err, isAdmin) {
-                logger.debug(`user ${user.user} is admin: ${isAdmin}`)
+                logger.debug(`user ${user.user} is admin: ${ isAdmin }`)
                 if (err) {
                     logger.warn('500: access denied')
-                    res.status(500).json({error: "could not get admin status"})
+                    res.status(500).json({ error: "could not get admin status" })
                     return
                 }
                 if (isAdmin) {
                     return next()
                 } else {
                     logger.warn('403: access denied')
-                    res.status(403).json({error: "access denied"})
+                    res.status(403).json({ error: "access denied" })
                 }
             })
         })
     } else {
-        logger.warn('403: not authorized - no headers set')
-        res.status(403).json({ error: "not authorized" })
+        logger.warn('401: not authorized - no headers set')
+        res.status(401).json({ error: "not authorized" })
     }
 }
 

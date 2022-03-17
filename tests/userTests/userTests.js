@@ -4,14 +4,13 @@ const expect = require('chai').expect
 
 var adminToken = ""
 describe("[TEST] /authenticate - testing login with Basic authentication", function() {
-    it("Trying to create a token using correct credentials", function(done) {
+    it("Trying to create a token using correct credentials to create adminToken", function(done) {
         request(app)
             .post('/authenticate')
-            .set('Authorization', 'Basic ' + new Buffer("admin:123").toString("base64"))
+            .set('Authorization', 'Basic ' + Buffer.from("admin:123").toString("base64"))
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("admin")
                 adminToken = res.header.authorization
 
                 if(err) done(err)
@@ -19,12 +18,12 @@ describe("[TEST] /authenticate - testing login with Basic authentication", funct
             })
     })
 
-    it("Trying to use wrong credentials: expecting a 500 status code (error) here", function(done) {
+    it("Trying to use wrong credentials: expecting a 401 status code (unauthorized) here", function(done) {
         request(app)
             .post('/authenticate')
-            .set('Authorization', 'Basic ' + new Buffer("admin:1234").toString("base64"))
+            .set('Authorization', 'Basic ' + Buffer.from("admin:1234").toString("base64"))
             .end(function(err, res) {
-                expect(500)
+                expect(401)
 
                 if(err) done(err)
                 done()
@@ -32,21 +31,21 @@ describe("[TEST] /authenticate - testing login with Basic authentication", funct
     })
 })
 
-describe("[TEST] /user - testing the user endpoint (should only work if authorized and administrator)", function() {
-    it("testing without authorization: expecting a 403 status code (error) here", function(done) {
+describe("[TEST] /users - testing the users endpoint (should only work if authorized and administrator)", function() {
+    it("testing without authorization: expecting a 401 status code (unauthorized) here", function(done) {
         request(app)
-            .get('/user')
+            .get('/users')
             .end(function(err, res) {
-                expect(res.status).to.equal(403)
+                expect(res.status).to.equal(401)
 
                 if(err) done(err)
                 done()
             })
     })
 
-    it("testing with authorization: should return one user from the database", function(done) {
+    it("Testing with authorization: should return one user from the database", function(done) {
         request(app)
-            .get('/user')
+            .get('/users')
             .set('Authorization', adminToken)
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
@@ -66,11 +65,54 @@ describe("[TEST] /user - testing the user endpoint (should only work if authoriz
             "isVerified": true
         }
         request(app)
-            .post('/user/')
+            .post('/users')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(killah247)
             .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect(res.body.userID).to.equal("killah247")
+                expect(res.body.userName).to.equal("Stefan Stecher")
+                expect(res.body.email).to.equal("iN00b@trash-me.com")
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Add bigsmoke by admin", function(done) {
+        var bigsmoke = {
+            "userID": "bigsmoke",
+            "userName": "Big Smoke",
+            "password": "ballasSnitch",
+            "email": "youpickedthewronghouse@fool.me",
+            "isVerified": true
+        }
+        request(app)
+            .post('/users')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(bigsmoke)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect(res.body.userID).to.equal("bigsmoke")
+                expect(res.body.userName).to.equal("Big Smoke")
+                expect(res.body.email).to.equal("youpickedthewronghouse@fool.me")
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to fetch other user with admin rights should get a 200 status code (ok) here", function(done) {
+        request(app)
+            .get('/users/bigsmoke')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .end(function(err, res) {
                 expect(res.status).to.equal(200)
+                expect(res.body.userID).to.equal("bigsmoke")
+                expect(res.body.userName).to.equal("Big Smoke")
+                expect(res.body.email).to.equal("youpickedthewronghouse@fool.me")
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -79,14 +121,13 @@ describe("[TEST] /user - testing the user endpoint (should only work if authoriz
     })
 
     var userToken = ""
-    it("Logging in as Stefan Stecher", function(done) {
+    it("Logging in as Stefan Stecher to create userToken", function(done) {
         request(app)
             .post('/authenticate')
-            .set('Authorization', 'Basic ' + new Buffer("killah247:h4cKm3n0oB").toString("base64"))
+            .set('Authorization', 'Basic ' + Buffer.from("killah247:h4cKm3n0oB").toString("base64"))
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
-                expect(res.body.userID).to.equal("killah247")
                 userToken = res.header.authorization
 
                 if(err) done(err)
@@ -94,18 +135,207 @@ describe("[TEST] /user - testing the user endpoint (should only work if authoriz
             })
     })
 
-    it("Trying to modify without admin rights should get a 403 status code (error) here", function(done) {
-        var modifiedAdmin = {
-            "userID": "admin",
-            "userName": "I hacked you",
-            "password": "y0uR3d0nE"
+    it("Trying to add ghostface by user should get a 403 status code (forbidden) here", function(done) {
+        var ghostface = {
+            "userID": "ghostface",
+            "userName": "Scream McBeam",
+            "password": "br0oO",
+            "email": "mi@ni.me"
         }
         request(app)
-            .post('/user/')
+            .post('/users')
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send(modifiedAdmin)
+            .send(ghostface)
             .end(function(err, res) {
                 expect(res.status).to.equal(403)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to fetch other user without admin rights should get a 403 status code (forbidden) here", function(done) {
+        request(app)
+            .get('/users/bigsmoke')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(403)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to fetch oneself without admin rights should get a 200 status code (ok) here", function(done) {
+        request(app)
+            .get('/users/killah247')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect(res.body.userID).to.equal("killah247")
+                expect(res.body.userName).to.equal("Stefan Stecher")
+                expect(res.body.email).to.equal("iN00b@trash-me.com")
+                expect(res.body.isVerified).to.equal(true)
+                expect(res.body.isAdministrator).to.equal(false)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to modify other users without admin rights should get a 403 status code (forbidden) here", function(done) {
+        var modifiedBigsmoke = {
+            "userID": "ghostface",
+            "userName": "Scream McBeam",
+            "password": "br0oO",
+            "email": "mi@ni.me"
+        }
+        request(app)
+            .put('/users/bigsmoke')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedBigsmoke)
+            .end(function(err, res) {
+                expect(res.status).to.equal(403)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to modify oneself without admin rights should get a 201 status code (ok) here", function(done) {
+        var modifiedKillah247 = {
+            "userID": "ghostface",
+            "userName": "Scream McBeam",
+            "password": "br0oO",
+            "email": "mi@ni.me"
+        }
+        request(app)
+            .put('/users/killah247')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedKillah247)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to rename oneself back after changing credentials should get a 401 status code (unauthorized) here", function(done) {
+        var modifiedGhostface = {
+            "userID": "killah247",
+            "userName": "Stefan Stecher",
+            "password": "h4cKm3n0oB",
+            "email": "iN00b@trash-me.com"
+        }
+        request(app)
+            .put('/users/ghostface')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedGhostface)
+            .end(function(err, res) {
+                expect(res.status).to.equal(401)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Logging in as Scream McBeam to create new userToken", function(done) {
+        request(app)
+            .post('/authenticate')
+            .set('Authorization', 'Basic ' + Buffer.from("ghostface:br0oO").toString("base64"))
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                userToken = res.header.authorization
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to rename oneself back with new token should get a 404 status code (not found) here", function(done) {
+        var modifiedGhostface = {
+            "userID": "killah247",
+            "userName": "Stefan Stecher",
+            "password": "h4cKm3n0oB",
+            "email": "iN00b@trash-me.com"
+        }
+        request(app)
+            .put('/users/killah247')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedGhostface)
+            .end(function(err, res) {
+                expect(res.status).to.equal(404)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+
+    it("Trying to delete other users without admin rights should get a 403 status code (forbidden) here", function(done) {
+        request(app)
+            .delete('/users/bigsmoke')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(403)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to delete oneself without admin rights should get a 200 status code (ok) here", function(done) {
+        request(app)
+            .delete('/users/ghostface')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to change users with admin rights should get a 201 status code (created) here", function(done) {
+        var modifiedBigsmoke = {
+            "userID": "ryder",
+            "userName": "Ryder",
+            "password": "ballasSnitch",
+            "email": "youpickedthewronghouse@fool.me",
+            "isVerified": true
+        }
+        request(app)
+            .put('/users/bigsmoke')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(modifiedBigsmoke)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(res.body.userID).to.equal("ryder")
+                expect(res.body.userName).to.equal("Ryder")
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying to delete users with admin rights should get a 200 status code (ok) here", function(done) {
+        request(app)
+            .delete('/users/ryder')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -115,15 +345,11 @@ describe("[TEST] /user - testing the user endpoint (should only work if authoriz
 })
 
 describe("[CLEANUP] Cleaning up database", function() {
-    it("Removing killah247 from database", function(done) {
-        var killah247 = {
-            "userID": "killah247"
-        }
+    it("Removing admin from database", function(done) {
         request(app)
-            .post('/user/deleteUserByID')
+            .delete('/users/admin')
             .set('Authorization', adminToken)
             .set('content-type', 'application/json')
-            .send(killah247)
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
 
@@ -132,18 +358,13 @@ describe("[CLEANUP] Cleaning up database", function() {
             })
     })
 
-    it("Removing admin from database", function(done) {
-        var user = {
-            "userID": "admin"
-        }
+    it("Recheck: User count should be 0 by now", function(done) {
         request(app)
-            .post('/user/deleteUserByID')
-            .set('Authorization', adminToken)
-            .set('content-type', 'application/json')
-            .send(user)
+            .get('/publicUser')
             .end(function(err, res) {
-                expect(res.status).to.equal(200)
-
+                expect(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(0)
                 if(err) done(err)
                 done()
             })

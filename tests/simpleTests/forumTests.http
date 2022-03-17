@@ -1,35 +1,35 @@
 // get all forums without token
 ###
-http://localhost:8080/forum
+GET http://localhost:8080/forumThreads/
 
-// creating a forum without authorization
+// creating a forumThread without authorization
 ###
-POST http://localhost:8080/forum
+POST http://localhost:8080/forumThreads
 Content-Type: application/json
 
 {
-  "forumName": "Test Forum",
-  "forumDescription": "Testing changes",
+  "name": "Test Forum",
+  "description": "Testing changes",
   "ownerID": "admin"
 }
 
 ###
-// creating a forum, owner is admin
+// creating a forumThread, owner is admin
 ###
-POST http://localhost:8080/forum
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+POST http://localhost:8080/forumThreads
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDc0NjU1ODQsImV4cCI6MTY0OTExMzM0OTkxOH0.zhNymwYsI4Zj75tLFdAB18JHwfkrtSBrOmSJbRPT76s
 Content-Type: application/json
 
 {
- "forumName": "Test Forum",
- "forumDescription": "Testing changes",
+ "name": "Test Forum",
+ "description": "Testing changes",
   "ownerID": "admin"
 }
 
 ###
-// trying to change a forum, owner is admin, user is manfred
+// trying to change a forumThread, owner is admin, user is manfred
 ###
-POST http://localhost:8080/forum
+PUT http://localhost:8080/forumThreads/Test Forum
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTgzNTkzMCwiZXhwIjoxNjQ3NDgyMDY2NjkzfQ.tyrG07QaHm5ZqzaM68jdFoSLkzH8xg_HKlKXv3yBsZ4
 Content-Type: application/json
 
@@ -40,30 +40,42 @@ Content-Type: application/json
 }
 
 ###
-// delete a forum, owner is admin
+// trying to change a forumThread, owner is admin, new owner is manfred
 ###
-POST http://localhost:8080/forum/deleteForumByName
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+PUT http://localhost:8080/forumThreads/6232685aeecb6c805b87fea0
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDc0NjU1ODQsImV4cCI6MTY0OTExMzM0OTkxOH0.zhNymwYsI4Zj75tLFdAB18JHwfkrtSBrOmSJbRPT76s
 Content-Type: application/json
 
 {
-  "forumName": "Test Forum"
+  "ownerID": "manfred"
 }
+
+###
+// delete a forumThread, owner is admin
+###
+DELETE http://localhost:8080/forumThreads/Test Forum
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+Content-Type: application/json
 
 ###
 // get all forums for admin
 ###
-http://localhost:8080/forum/getByOwnerID
+http://localhost:8080/forumThreads/getByOwnerID
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
+
+###
+// get all forums for admin via search
+###
+http://localhost:8080/forumThreads/?ownerID="admin"
 
 // get all forums for manfred
 ###
-http://localhost:8080/forum/getByOwnerID
+http://localhost:8080/forumThreads/getByOwnerID
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTgzNTkzMCwiZXhwIjoxNjQ3NDgyMDY2NjkzfQ.tyrG07QaHm5ZqzaM68jdFoSLkzH8xg_HKlKXv3yBsZ4
 
 // get all forums for manfred with admin token
 ###
-POST http://localhost:8080/forum/getByOwnerID
+POST http://localhost:8080/forumThreads/getByOwnerID
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
 Content-Type: application/json
 
@@ -74,7 +86,7 @@ Content-Type: application/json
 ###
 // get all forums for admin with user token
 ###
-POST http://localhost:8080/forum/getByOwnerID
+POST http://localhost:8080/forumThreads/getByOwnerID
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoibWFuZnJlZCIsImlhdCI6MTY0NTgzNTkzMCwiZXhwIjoxNjQ3NDgyMDY2NjkzfQ.tyrG07QaHm5ZqzaM68jdFoSLkzH8xg_HKlKXv3yBsZ4
 Content-Type: application/json
 

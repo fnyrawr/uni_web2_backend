@@ -1,7 +1,5 @@
 const server = require('../httpServer')
 const db = require('../database/db')
-const request = require("supertest")
-const app = require("../httpServer")
 var logger = require('../config/winston')
 
 describe('/publicUser endpoint Tests', function() {
@@ -9,13 +7,13 @@ describe('/publicUser endpoint Tests', function() {
     require('./userTests/publicUserTests')
 })
 
-describe('/authentication and /user endpoint Tests', function() {
-    logger.info("Starting automated /authentication and /user endpoint tests")
+describe('/authentication and /users endpoint Tests', function() {
+    logger.info("Starting automated /authentication and /users endpoint tests")
     require('./userTests/userTests')
 })
 
-describe('/forum, /forumMessage and /comment tests', function() {
-    logger.info("Starting automated /forum, /forumMessage and /comment endpoint tests")
+describe('/forumThreads, /forumMessage and /comment tests', function() {
+    logger.info("Starting automated /forumThreads, /forumMessage and /comment endpoint tests")
     require('./forumTests/forumTests')
 })
 

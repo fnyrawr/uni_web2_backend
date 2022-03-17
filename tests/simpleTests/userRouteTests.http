@@ -1,9 +1,13 @@
 ###
+// delete all previous
+DELETE http://localhost:8080/publicUser/deleteAllUsers
+
+###
 // no users should be in the database here
 http://localhost:8080/publicUser/
 
 ###
-// creating first user who is admin
+// creating first user who is admin | throws 409 (conflict) because admin is created by default
 POST http://localhost:8080/publicUser/
 Content-Type: application/json
 
@@ -16,12 +20,7 @@ Content-Type: application/json
 
 ###
 // find admin in database
-POST http://localhost:8080/publicUser/getUserByID
-Content-Type: application/json
-
-{
-  "userID": "admin"
-}
+GET http://localhost:8080/publicUser/admin
 
 ###
 // creating second user who is not admin
@@ -46,7 +45,7 @@ Content-Type: application/json
 
 ###
 // update manfred
-POST http://localhost:8080/publicUser/
+PUT http://localhost:8080/publicUser/manfred
 Content-Type: application/json
 
 {
@@ -59,6 +58,29 @@ Content-Type: application/json
 http://localhost:8080/publicUser/
 
 ###
+// try creating user without userID - expect 400 (bad request)
+POST http://localhost:8080/publicUser/
+Content-Type: application/json
+
+{
+  "userName": "Manfred Mustermann",
+  "email": "trashmehard@existiert.net",
+  "password": "asdf"
+}
+
+###
+// try updating user who doesn't exist - expect 404 (not found)
+PUT http://localhost:8080/publicUser/manni
+Content-Type: application/json
+
+{
+  "userID": "manfred",
+  "userName": "Manfred Mustermann",
+  "email": "trashmehard@existiert.net",
+  "password": "asdf"
+}
+
+###
 POST http://localhost:8080/publicUser/deleteUserByID
 Content-Type: application/json
 
@@ -67,7 +89,7 @@ Content-Type: application/json
 }
 
 ###
-POST http://localhost:8080/publicUser/deleteUserByID
+DELETE http://localhost:8080/publicUser/manfred
 Content-Type: application/json
 
 {

@@ -13,11 +13,11 @@ Authorization: Basic admin:1234
 
 // get all users without token
 ###
-http://localhost:8080/user
+GET http://localhost:8080/users
 
 // get all users with admin token
 ###
-http://localhost:8080/user
+http://localhost:8080/users
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
 
 // Login for manfred

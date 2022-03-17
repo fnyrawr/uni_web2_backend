@@ -5,7 +5,9 @@ const config = require("config")
 const jwt = require("jsonwebtoken")
 
 function getUsers(callback) {
-    User.find(function (err, users) {
+    // specify query to prevent passwords being returned
+    var query = User.find().select('userID userName email isVerified isAdministrator')
+    query.exec(function (err, users) {
         if(err) {
             logger.error("Error while searching: " + err)
             return callback(err, null)
@@ -21,7 +23,7 @@ function findUserBy(searchUserID, callback) {
     logger.debug("Trying to find userID " + searchUserID)
 
     if(!searchUserID) {
-        callback("UserID is missing")
+        callback("UserID is missing", null)
     }
     else {
         var query = User.findOne({ userID: searchUserID })
@@ -37,7 +39,7 @@ function findUserBy(searchUserID, callback) {
                 }
                 else {
                     // creating admin account if didn't exist yet
-                    if ('admin' == searchUserID) {
+                    if ('admin' === searchUserID) {
                         logger.info('There is no admin account yet, creating now with defaults')
                         var adminUser = new User();
                         adminUser.userID = "admin"
@@ -46,7 +48,7 @@ function findUserBy(searchUserID, callback) {
                         adminUser.isAdministrator = true
                         adminUser.isVerified = true
                         adminUser.email = "admin@existiert.net"
-                        adminUser.confirmationToken = new Buffer(adminUser.email).toString("base64")
+                        adminUser.confirmationToken = null
 
                         adminUser.save(function(err) {
                             if(err) {
@@ -130,6 +132,9 @@ function insertOne(userProps, isAdmin, callback) {
         if(userProps.isVerified) {
             newUser.isVerified = userProps.isVerified
         }
+        if(userProps.isAdministrator) {
+            newUser.isAdministrator = userProps.isAdministrator
+        }
     }
 
     // only create if required data is given
@@ -139,7 +144,7 @@ function insertOne(userProps, isAdmin, callback) {
         var expirationTime = config.get('verification.timeout')
         var expiresAt = issuedAt + (expirationTime * 1000)
         var privateKey = config.get('verification.tokenKey')
-        newUser.confirmationToken = new Buffer(jwt.sign({ "email": newUser.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
+        newUser.confirmationToken = Buffer.from(jwt.sign({ "email": newUser.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
         newUser.save(function (err, newUser) {
             if (err) {
                 logger.error("Could not create user: " + err)
@@ -161,6 +166,9 @@ function insertOne(userProps, isAdmin, callback) {
 
 function updateOne(user, userProps, isAdmin, callback) {
     logger.debug("Trying to update user with userID: " + user.userID)
+    if(userProps.userID) {
+        user.userID = userProps.userID
+    }
     if(userProps.userName) {
         user.userName = userProps.userName
     }
@@ -207,19 +215,10 @@ function verifyOne(user, token, callback) {
     }
 }
 
-function checkVerification(user) {
-    if(user.isVerified) {
-        return true
-    }
-    else {
-        return false
-    }
-}
-
 function deleteOne(userID, callback) {
     logger.debug("Trying to delete user with userID: " + userID)
 
-    findUserBy(userID, function(err, user){
+    findUserBy(userID, function(err, user) {
         if(user) {
             user.remove(function(err) {
                 if(err) {
@@ -238,6 +237,32 @@ function deleteOne(userID, callback) {
     })
 }
 
+// deleting all users (for cleaning up Database before tests)
+function deleteAllUsers(callback) {
+    logger.debug("Trying to delete all current users ")
+
+    var query = User.deleteMany()
+    query.exec(function(err, message) {
+        if(err) {
+            logger.warn("Could not delete previous users: " + err)
+            callback("Could not delete previous users: " + err, null)
+        }
+        else {
+            logger.debug("Deleted all previous users")
+            callback(null, true)
+        }
+    })
+}
+
+function checkVerification(user) {
+    if(user.isVerified) {
+        return true
+    }
+    else {
+        return false
+    }
+}
+
 module.exports = {
     getUsers,
     findUserBy,
@@ -247,5 +272,6 @@ module.exports = {
     updateOne,
     verifyOne,
     deleteOne,
+    deleteAllUsers,
     checkVerification
 }

@@ -7,8 +7,10 @@ var authenticationService = require('./AuthenticationService')
 router.post('/', function(req, res, next) {
     // check for basic auth header
     if (!req.headers.authorization || req.headers.authorization.indexOf('Basic ') === -1) {
+        // 401: unauthorized
+        logger.error("Error: Missing authorization header")
         res.setHeader('WWW-Authenticate', 'Basic realm="Secure Area"')
-        return res.status(401).json({ message: 'Missing Authorization Header' })
+        return res.status(401).send({ error: 'Missing authorization header' })
     }
 
     // verify auth credentials
@@ -25,19 +27,20 @@ router.post('/', function(req, res, next) {
             res.header("Authorization", "Bearer " + token)
 
             if(user) {
-                const { id, userID, userName, email, ...partialObject } = user
-                const subset = { id, userID, userName, email }
-                console.log(JSON.stringify(subset))
-                res.send(subset)
+                // 200: OK
+                logger.info("Created token for user " + user.userID)
+                res.status(200).send({ "Success": "Token created successfully"})
             }
             else {
-                logger.error("User is null, even though a token has been created. Error: " + err)
+                // 500: internal server error
+                logger.error("Internal server error: " + err)
                 res.status(500).json({ error: err })
             }
         }
         else {
+            // 401: unauthorized
             logger.error("Token has not been created. Error: " + err)
-            res.status(403).json({ error: err })
+            res.status(401).json({ "Error": "Failed to create token: Authentication failed" })
         }
     })
 })
