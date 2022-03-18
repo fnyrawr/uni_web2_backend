@@ -1,9 +1,9 @@
 var mongoose = require('mongoose')
 
 const CommentSchema = new mongoose.Schema({
-        messageTitle: String,
+        messageID: String,
         commentNo: Number,
-        commentText: String,
+        text: String,
         authorID: String,
         edited: { type: Boolean, default: false },
         editAuthor: String,

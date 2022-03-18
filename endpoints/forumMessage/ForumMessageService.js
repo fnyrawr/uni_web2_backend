@@ -23,7 +23,7 @@ function findMessagesByForumThreadID(forumThreadID, callback) {
     logger.debug("Trying to find messages for forumID " + forumThreadID)
 
     if(!forumThreadID) {
-        callback("forumID is missing")
+        callback("forumID is missing", null)
     }
     else {
         var query = Messages.find({ forumThreadID: forumThreadID })
@@ -218,7 +218,7 @@ function deleteMessagesOfForum(searchForumID, callback) {
                     callback("Could not find messages for forumID: " + searchForumID, false)
                 }
                 else {
-                    logger.debug(`Deleted all messages of forum with forumID: ${searchForumID}`)
+                    logger.debug(`Deleted all messages of forum with forumID: ${ searchForumID }`)
                     callback(null, true)
                 }
             })
@@ -228,7 +228,6 @@ function deleteMessagesOfForum(searchForumID, callback) {
 
 module.exports = {
     getForumMessages,
-    findMessagesByForumThreadID,
     findMessageByTitle,
     findMessageByID,
     insertOne,

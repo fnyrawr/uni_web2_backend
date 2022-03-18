@@ -3,8 +3,9 @@ const userService = require("../user/UserService")
 var logger = require('../../config/winston')
 
 // Admin-Function: getting ALL forumThreads comments regardless of forums
-function getComments(callback) {
-    Comments.find(function (err, comments) {
+function getComments(filters, callback) {
+    var query = Comments.find(filters)
+    query.exec(function (err, comments) {
         if(err) {
             logger.error("Error while searching: " + err)
             return callback(err, null)
@@ -17,95 +18,36 @@ function getComments(callback) {
 }
 
 // find comments belonging to a message
-function findCommentsByMessageTitle(searchMessageTitle, callback) {
-    logger.debug("Trying to find messages for messageTitle " + searchMessageTitle)
+function findCommentByID(searchCommentID, callback) {
+    logger.debug("Trying to find messages for messageTitle " + searchCommentID)
 
-    if(!searchMessageTitle) {
-        callback("messageTitle is missing")
+    if(!searchCommentID) {
+        callback("messageTitle is missing", null)
     }
     else {
-        var query = Comments.find({ forumID: searchMessageTitle })
-        query.exec(function(err, comments) {
+        var query = Comments.findOne({ _id: searchCommentID })
+        query.exec(function(err, comment) {
             if(err) {
-                logger.warn("Could not find comments for messageTitle: " + searchMessageTitle)
-                callback("Could not find comments for messageTitle: " + searchMessageTitle, null)
+                logger.warn("Could not find comments for id: " + searchCommentID)
+                callback("Could not find comments for id: " + searchCommentID, null)
             }
             else {
-                if(comments) {
-                    logger.debug(`Found messageTitle: ${searchMessageTitle}`)
-                    callback(null, comments)
+                if(comment) {
+                    logger.debug(`Found comment: ${searchCommentID}`)
+                    callback(null, comment)
                 }
                 else {
-                    logger.warn("Could not find comments for messageTitle: " + searchMessageTitle)
-                    callback("MessageTitle " + searchMessageTitle + " not found", null)
+                    logger.warn("Could not find comments for id: " + searchCommentID)
+                    callback("id " + searchCommentID + " not found", null)
                 }
             }
         })
     }
-}
-
-// find comments belonging to a user
-function findCommentsByUserID(searchUserID, callback) {
-    logger.debug("Trying to find comments for userID " + searchUserID)
-
-    if(!searchUserID) {
-        callback("userID is missing")
-    }
-    else {
-        var query = Comments.find({ authorID: searchUserID })
-        query.exec(function(err, comments) {
-            if(err) {
-                logger.warn("Could not find comments for userID: " + searchUserID)
-                callback("Could not find comments for userID: " + searchUserID, null)
-            }
-            else {
-                if(comments) {
-                    logger.debug(`Found userID: ${searchUserID}`)
-                    callback(null, comments)
-                }
-                else {
-                    logger.warn("Could not find comments for userID: " + searchUserID)
-                    callback("UserID " + searchUserID + " not found", null)
-                }
-            }
-        })
-    }
-}
-
-// find message by title
-function findComment(searchMessageTitle, searchCommentNo, callback) {
-    logger.debug("Trying to find messages for messageTitle " + searchMessageTitle + " and commentNo " + searchCommentNo)
-
-    if(!searchMessageTitle) {
-        return callback("messageTitle is missing", null)
-    }
-    // if no commentNo is given the comment can't be existing yet (hence no update but creation instead) -> no error but also no comment to return
-    if(!searchCommentNo) {
-        return callback(null, null)
-    }
-
-    var query = Comments.findOne({ messageTitle: searchMessageTitle, commentNo: { $eq: searchCommentNo } })
-    query.exec(function(err, comment) {
-        if(err) {
-            logger.warn("Could not find comment for messageTitle: " + searchMessageTitle + " and commentNo " + searchCommentNo)
-            callback("Could not find comment for messageTitle: " + searchMessageTitle + " and commentNo " + searchCommentNo, null)
-        }
-        else {
-            if(comment) {
-                logger.debug(`Found comment for: ${searchMessageTitle}`)
-                callback(null, comment)
-            }
-            else {
-                logger.debug("Could not find comment for messageTitle: " + searchMessageTitle + " and commentNo " + searchCommentNo)
-                callback("MessageTitle " + searchMessageTitle + " with commentNo " + searchCommentNo + " not found", null)
-            }
-        }
-    })
 }
 
 // get the number of the latest comment of messageTitle | returning 0 if none is found (no comments yet)
-function getCurrentCommentNo(searchMessageTitle, callback) {
-    Comments.findOne({ messageTitle: searchMessageTitle }).sort({ _id: -1 }).limit(1).exec(function(err, res) {
+function getCurrentCommentNo(searchMessageID, callback) {
+    Comments.findOne({ messageID: searchMessageID }).sort({ _id: -1 }).limit(1).exec(function(err, res) {
         if(err) {
             logger.error("Error: " + err)
             return callback(err, null)
@@ -125,21 +67,21 @@ function insertOne(commentProps, user, callback) {
     logger.debug("Trying to create a new comment")
     // set owner according to props only if requester is admin, otherwise owner is user
     var authorID = user
-    var messageTitle = commentProps.messageTitle
-    var commentText = commentProps.commentText
+    var messageID = commentProps.messageID
+    var text = commentProps.text
     var timestamp = new Date().toLocaleString()
 
     // only create if all required properties are given
-    if(messageTitle && commentText) {
-        getCurrentCommentNo(messageTitle, function(err, count) {
+    if(messageID && text) {
+        getCurrentCommentNo(messageID, function(err, count) {
             if(err) {
                 return callback("Could not create comment: " + err, null)
             }
 
             var newComment = new Comments({
-                messageTitle: messageTitle,
+                messageID: messageID,
                 commentNo: count + 1,
-                commentText: commentText,
+                text: text,
                 authorID: authorID,
                 creationTimestamp: timestamp,
             })
@@ -161,7 +103,7 @@ function insertOne(commentProps, user, callback) {
 }
 
 function updateOne(comment, commentProps, user, callback) {
-    logger.debug("Trying to update comment with messageTitle: " + comment.messageTitle + " and commentNo " + comment.commentNo)
+    logger.debug("Trying to update comment from commentID " + comment._id)
     // set author according to props only if requester is admin, otherwise author is user
     userService.getIsAdmin(user, (err, adminStatus) => {
         var timestamp = new Date().toLocaleString()
@@ -169,12 +111,11 @@ function updateOne(comment, commentProps, user, callback) {
         // add note to message if edited by admin
         var adminEdit = false
         if(user != comment.authorID && adminStatus) {
-            logger.info("Message " + comment.messageTitle + " of user " + comment.authorID + " edited by admin " + user)
+            logger.info("Comment " + comment._id + " of user " + comment.authorID + " edited by admin " + user)
             adminEdit = true
         }
 
         if(comment && (!(user != comment.authorID) || adminEdit)) {
-            comment.messageText = commentProps.messageText
             comment.edited = true
             comment.editAuthor = user
             comment.editTimestamp = timestamp
@@ -195,51 +136,35 @@ function updateOne(comment, commentProps, user, callback) {
     })
 }
 
-function deleteOne(messageTitle, commentNo, user, callback) {
-    logger.debug("Trying to delete comment with messageTitle: " + messageTitle + " and commentNo " + commentNo)
+function deleteOne(comment, callback) {
+    logger.debug("Trying to delete comment with commentID: " + comment._id + " from messageID " + comment.messageID)
 
-    // only delete if user is author or admin
-    userService.getIsAdmin(user, (err, adminStatus) => {
-        findComment(messageTitle, commentNo, function (err, comment) {
-            if(comment) {
-                if(comment.authorID === user || adminStatus) {
-                    comment.remove(function (err) {
-                        if (err) {
-                            logger.error("Error while deletion of comment with messageTitle: " + messageTitle + " and commentNo " + commentNo)
-                            callback("Error while deletion", null)
-                        } else {
-                            callback(null, "Deleted comment of " + messageTitle + " with commentNo " + commentNo)
-                        }
-                    })
-                }
-                else {
-                    logger.warn("Error: Not enough rights to delete comment")
-                    callback("Not enough rights to delete comment", null)
-                }
-            } else {
-                logger.error("Deletion of comment failed: Comment not found")
-                callback("Could not delete comment: Comment not found", null)
-            }
-        })
+    comment.remove(function (err) {
+        if (err) {
+            logger.error("Error while deletion of comment with commentID: " + comment._id + " from messageID " + comment.messageID)
+            callback("Error while deletion", null)
+        } else {
+            callback(null, "Deleted comment with commentID: " + comment._id + " from messageID " + comment.messageID)
+        }
     })
 }
 
 // deleting all comments from a message (used in process of message deletion)
-function deleteCommentsOfMessage(searchMessageTitle, callback) {
-    logger.debug("Trying to delete all comments for messageTitle " + searchMessageTitle)
+function deleteCommentsOfMessage(searchMessageID, callback) {
+    logger.debug("Trying to delete all comments for messageID " + searchMessageID)
 
-    if(!searchMessageTitle) {
-        return callback("messageTitle is missing", false)
+    if(!searchMessageID) {
+        return callback("messageID is missing", false)
     }
     else {
-        var query = Comments.deleteMany({ messageTitle: searchMessageTitle })
+        var query = Comments.deleteMany({ messageID: searchMessageID })
         query.exec(function(err, message) {
             if(err) {
-                logger.warn("Could not find comments for messageTitle: " + searchMessageTitle)
-                return callback("Could not find comments for messageTitle: " + searchMessageTitle, false)
+                logger.warn("Could not find comments for messageID: " + searchMessageID)
+                return callback("Could not find comments for messageID: " + searchMessageID, false)
             }
             else {
-                logger.debug(`Deleted all comments of message with messageTitle: ${searchMessageTitle}`)
+                logger.debug(`Deleted all comments of message with messageID: ${ searchMessageID }`)
                 return callback(null, true)
             }
         })
@@ -248,9 +173,7 @@ function deleteCommentsOfMessage(searchMessageTitle, callback) {
 
 module.exports = {
     getComments,
-    findCommentsByMessageTitle,
-    findCommentsByUserID,
-    findComment,
+    findCommentByID,
     insertOne,
     updateOne,
     deleteOne,

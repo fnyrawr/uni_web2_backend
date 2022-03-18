@@ -6,131 +6,191 @@ var commentService = require("./CommentsService")
 var authenticationService = require("../authentication/AuthenticationService")
 const userService = require("../user/UserService")
 
-// get all comments
-router.get('/', authenticationService.isAdministrator, function(req, res, next) {
-    commentService.getComments(function (err, result) {
-        if (result) {
-            logger.debug("found comments" + result)
-            return res.send(Object.values(result))
+// get by ID
+router.get('/:id', function(req, res, next) {
+    // extract filters from query
+    let filters = { _id: req.params.id }
+
+    commentService.getComments(filters,function (err, result) {
+        if(err) {
+            // 500: internal server error
+            logger.error(err)
+            return res.status(500).send(err)
         }
         else {
-            logger.error(err)
-            return res.status(500).json({ error: err })
+            // 200: OK
+            logger.debug("found comments " + result)
+            return res.status(200).send(Object.values(result))
         }
     })
 })
 
-// get all messages for messageTitle
-router.post('/getByMessageTitle', authenticationService.isAuthenticated, function(req, res, next) {
-    var messageTitle = req.body.messageTitle
+// get all comments
+router.get('/*', function(req, res, next) {
+    // extract filters from query
+    let filters = {}
+    if(req.query.id) filters._id = req.query.id
+    if(req.query.messageID) filters.messageID = req.query.messageID.toString().replace(/"/g, '')
+    if(req.query.commentText) filters.commentText = req.query.commentText.toString().replace(/"/g, '')
+    if(req.query.authorID) filters.authorID = req.query.authorID.toString().replace(/"/g, '')
 
-    if(messageTitle) {
-        commentService.findCommentsByMessageTitle(messageTitle, function (err, result) {
-            if (result) {
-                logger.debug("found comments" + result)
-                return res.send(Object.values(result))
-            }
-            else {
-                logger.error(err)
-                res.status(404).json({ error: err })
-            }
-        })
-    }
-    else {
-        logger.error("Error: no messageTitle specified")
-        return res.status(500).json({ error: "MessageTitle not specified" })
-    }
-})
-
-// get all comments for userID
-router.post('/getByUserID', authenticationService.isAuthenticated, function(req, res, next) {
-    var userID = req.body.userID
-
-    if(userID) {
-        commentService.findCommentsByUserID(userID, function (err, result) {
-            if (result) {
-                logger.debug("found comments " + result)
-                return res.send(Object.values(result))
-            }
-            else {
-                logger.error(err)
-                res.status(404).json({ error: err })
-            }
-        })
-    }
-    else {
-        logger.error("Error: no userID specified")
-        return res.status(500).json({ error: "UserID not specified" })
-    }
-})
-
-router.post('/', authenticationService.isAuthenticated, function(req, res, next) {
-    // try to find comment, if exists update, if not create
-    commentService.findComment(req.body.messageTitle, req.body.commentNo, function(err, comment) {
+    commentService.getComments(filters,function (err, result) {
         if(err) {
-            res.status(500).json({ error: err })
-            return
+            // 500: internal server error
+            logger.error(err)
+            return res.status(500).send(err)
         }
-        // update comment
-        if(comment) {
-            logger.debug("Comment already exists, trying to update properties")
-            authenticationService.getUserFromToken(req, function(err, user) {
-                userService.getIsAdmin(user, (err, adminStatus) => {
-                    if(adminStatus === true || comment.authorID === user) {
-                        commentService.updateOne(comment, req.body, user, function (err, comment) {
-                            if (comment) {
-                                console.log(JSON.stringify(comment))
-                                res.send(comment)
-                            } else {
-                                logger.error("Error while updating comment: " + err)
-                                res.status(500).json({ error: err })
-                            }
-                        })
+        else {
+            // 200: OK
+            logger.debug("found comments " + result)
+            return res.status(200).send(Object.values(result))
+        }
+    })
+})
+
+// create comment
+router.post('/', authenticationService.isAuthenticated, function(req, res, next) {
+    // create new comment
+    let newComment = {}
+    if(req.body.messageID) newComment.messageID = req.body.messageID
+    if(req.body.text) newComment.text = req.body.text
+
+    if(newComment.messageID && newComment.text) {
+        logger.debug("Creating new comment now")
+        authenticationService.getUserFromToken(req, function(err, user) {
+            if(err) {
+                // 500: internal server error
+                logger.error("Could not get User from token: " + err)
+                res.status(500).json({ error: "Could not get User from token" })
+            }
+            else {
+                commentService.insertOne(req.body, user, function (err, comment) {
+                    if (comment) {
+                        // 201: created
+                        logger.info(JSON.stringify(comment))
+                        res.status(201).json(comment).send()
                     }
                     else {
-                        logger.warn("Error: Not enough rights to modify")
-                        res.status(403).json({ error: "Permission denied: Not enough rights" })
+                        // 500: internal server error
+                        logger.error("Error while creating Comment: " + err)
+                        res.status(500).json({ error: "Could not create Comment" })
                     }
                 })
-            })
-        }
-        // create comment
-        else {
-            logger.debug("Comment does not exist yet, creating now")
-            authenticationService.getUserFromToken(req, function(err, user) {
-                if(err) {
-                    res.status(500).json({ error: "Could not get User" })
-                }
-                commentService.insertOne(req.body, user, function (err, comment) {
-                    if(comment) {
-                        console.log(JSON.stringify(comment))
-                        res.send(comment)
-                    } else {
-                        logger.error("Error while creating comment: " + err)
-                        res.status(500).json({ error: err })
-                    }
-                })
-            })
-        }
-    })
-})
-
-router.post('/delete', authenticationService.isAuthenticated, function(req, res, next){
-    authenticationService.getUserFromToken(req, function(err, user) {
-        if(err) {
-            res.status(500).json({ error: "Could not get User" })
-        }
-        commentService.deleteOne(req.body.messageTitle, req.body.commentNo, user, function (err, result) {
-            if(err) {
-                logger.warn("Error while deleting message: " + err)
-                res.status(403).json({ error: err })
-            }
-            else {
-                logger.info(result)
-                res.send(result)
             }
         })
-    })
+    }
+    else {
+        // 400: bad request
+        logger.error("Bad request: missing text")
+        res.status(400).send({ error: 'no text in body specified' })
+    }
+})
+
+// update comment
+router.put('/:id', authenticationService.isAuthenticated, function(req, res, next) {
+    // try to find comment, if exists update
+    const searchCommentID = req.params.id
+    let updatedComment = {}
+    if(req.body.text) updatedComment.text = req.body.text
+
+    if(searchCommentID && updatedComment.text) {
+        commentService.findCommentByID(searchCommentID, function (err, comment) {
+            logger.debug("Comment exists, trying to update properties")
+            if(comment) {
+                authenticationService.getUserFromToken(req, function (err, user) {
+                    if(user) {
+                        userService.getIsAdmin(user, (err, adminStatus) => {
+                            if(err) {
+                                // 500: internal server error
+                                logger.error("Failed trying to read if user is admin")
+                                res.status(500).send({ error: err })
+                            } else {
+                                logger.debug("is " + user + " admin? " + adminStatus + " | comment author: " + comment.authorID)
+                                if(adminStatus === true || comment.authorID === user) {
+                                    commentService.updateOne(comment, updatedComment, user, function (err, comment) {
+                                        if(comment) {
+                                            // 201: created
+                                            logger.info("Updated Comment: " + JSON.stringify(comment))
+                                            res.status(201).json(comment).send()
+                                        }
+                                        else {
+                                            // 500: internal server error
+                                            logger.error("Error while updating comment: " + err)
+                                            res.status(500).json({ error: err })
+                                        }
+                                    })
+                                } else {
+                                    logger.warn("Error: Not enough rights to modify")
+                                    res.status(403).json({ error: "Permission denied: Not enough rights" })
+                                }
+                            }
+                        })
+                    } else {
+                        // 404: not found
+                        logger.error("Could not find comment with id " + searchCommentID + ": " + err)
+                        res.status(404).send({ error: err })
+                    }
+                })
+            } else {
+                // 404: not found
+                logger.error("Could not find comment with id " + searchCommentID + ": " + err)
+                res.status(404).send({error: err})
+            }
+        })
+    }
+    else {
+        // 400: bad request
+        logger.error("Bad request: missing id or text")
+        res.status(400).send({ error: 'no id in URL or text in body specified, need both to update' })
+    }
+})
+
+// delete comment
+router.delete('/:id', authenticationService.isAuthenticated, function(req, res, next){
+    const { id } = req.params
+    if(id) {
+        authenticationService.getUserFromToken(req, function (err, user) {
+            if(err) {
+                res.status(500).json({ error: "Could not get User" })
+            }
+            // only delete if user is author or admin
+            userService.getIsAdmin(user, function (err, adminStatus) {
+                commentService.findCommentByID(id, function(err, comment) {
+                    if(comment) {
+                        if(comment.authorID === user || adminStatus) {
+                            commentService.deleteOne(comment, function(err, deleted) {
+                                if(err) {
+                                    // 500: internal server error
+                                    logger.error("Error while deleting Comment: " + err)
+                                    res.status(500).send({ error: err })
+                                }
+                                else {
+                                    // 200: OK
+                                    logger.info("Deleted Comment with id " + id)
+                                    res.status(200).send({ "Success": "Deleted Comment with id " + id })
+                                }
+                            })
+                        }
+                        else {
+                            // 403: forbidden
+                            logger.error("Not enough rights to delete comment: " + err)
+                            res.status(403).send({ error: err })
+                        }
+                    }
+                    else {
+                        // 404: not found
+                        logger.error("Deletion of comment with id: " + title + " failed: id not found")
+                        res.status(404).send({ error: err })
+                    }
+                })
+            })
+        })
+    }
+    else {
+        // 400: bad request
+        logger.error("Bad request: missing id")
+        res.status(400).send({ error: 'no id in URL specified' })
+    }
 })
 
 module.exports = router

@@ -48,7 +48,7 @@ function findForumsByOwner(searchUserName, callback) {
     logger.debug("Trying to find forums for " + searchUserName)
 
     if(!searchUserName) {
-        callback("userName is missing")
+        callback("userName is missing", null)
     }
     else {
         var query = ForumThread.find({ ownerID: searchUserName })

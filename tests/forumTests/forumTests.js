@@ -21,53 +21,23 @@ describe("[PREP] creating users and generating their tokens for forumThreads tes
             })
     })
 
-    var confirmationToken = ""
-    it("Create manfred via signup", function(done) {
+    it("Add manfred by admin", function(done) {
         var manfred = {
             "userID": "manfred",
             "userName": "Manfred Müller",
             "password": "asdf",
-            "email": "trashmehard@existiert.net"
+            "email": "trashmehard@existiert.net",
+            "isVerified": true
         }
-        // recreate token for testing purposes
-        var issuedAt = new Date().getTime()
-        var expirationTime = config.get('verification.timeout')
-        var expiresAt = issuedAt + (expirationTime * 1000)
-        var privateKey = config.get('verification.tokenKey')
-        confirmationToken = Buffer.from(jwt.sign({ "email": "trashmehard@existiert.net" }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
         request(app)
-            .post('/signup')
-            .set({ 'content-type': 'application/json' })
+            .post('/users')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(manfred)
             .end(function(err, res) {
                 expect(res.status).to.equal(201)
-                expect('content-type', 'application/json; charset=utf-8')
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Try to create a token for manfred (not verified yet) - expecting 403 status code (error) here", function(done) {
-        request(app)
-            .post('/authenticate')
-            .set('Authorization', 'Basic ' + Buffer.from("manfred:asdf").toString("base64"))
-            .end(function(err, res) {
-                expect(403)
-                expect('content-type', 'application/json; charset=utf-8')
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Verify manfred with confirmationToken", function(done) {
-        var route = '/signup/confirm/' + confirmationToken
-        request(app)
-            .get(route)
-            .set({ 'content-type': 'application/json' })
-            .end(function(err, res) {
-                expect(res.status).to.equal(200)
+                expect(res.body.userID).to.equal("manfred")
+                expect(res.body.userName).to.equal("Manfred Müller")
+                expect(res.body.email).to.equal("trashmehard@existiert.net")
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -83,19 +53,6 @@ describe("[PREP] creating users and generating their tokens for forumThreads tes
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
                 userToken = res.header.authorization
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Try to verify manfred with confirmationToken for a 2nd time - should throw a 400 status code (bad request) here", function(done) {
-        request(app)
-            .get('/signup/confirm/' + confirmationToken)
-            .set({ 'content-type': 'application/json' })
-            .end(function(err, res) {
-                expect(res.status).to.equal(400)
-                expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
                 done()
@@ -133,6 +90,24 @@ describe("[TEST] Testing forumThreads functionalities", function() {
                 expect(res.status).to.equal(201)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.ownerID).to.equal("admin")
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Add forumThread without name (400 - bad request)", function(done) {
+        var adminForum = {
+            "description": "Forum created without name",
+            "ownerID": "admin"
+        }
+        request(app)
+            .post('/forumThreads/')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(adminForum)
+            .end(function(err, res) {
+                expect(res.status).to.equal(400)
+                expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
                 done()
@@ -236,9 +211,6 @@ describe("[TEST] Testing forumThreads functionalities", function() {
     })
 
     it("Get all Forums of manfred with adminToken", function(done) {
-        var manfred = {
-            "ownerID": "manfred"
-        }
         request(app)
             .get('/forumThreads/?ownerID="manfred"')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
@@ -251,13 +223,27 @@ describe("[TEST] Testing forumThreads functionalities", function() {
                 done()
             })
     })
+
+    it("Get all Forums of admin with userToken", function(done) {
+        request(app)
+            .get('/forumThreads/?ownerID="admin"')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(0)
+
+                if(err) done(err)
+                done()
+            })
+    })
 })
 
 var message1ID = ""
 var message2ID = ""
 var message3ID = ""
 describe("[TEST] Testing forumMessage functionalities", function() {
-    it("get all messages without token", function(done) {
+    it("get all messages without token, no restrictions on reading", function(done) {
         request(app)
             .get('/forumMessages')
             .end(function (err, res) {
@@ -270,7 +256,7 @@ describe("[TEST] Testing forumMessage functionalities", function() {
             })
     })
 
-    it("get all messages with user token", function(done) {
+    it("get all messages with user token, no restrictions on reading", function(done) {
         request(app)
             .get('/forumMessages')
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
@@ -372,6 +358,24 @@ describe("[TEST] Testing forumMessage functionalities", function() {
             })
     })
 
+    it("Try to edit an admin message with userToken (403 - not enough rights)", function(done) {
+        var message = {
+            "forumThreadID": testForumID,
+            "title": "Heya",
+            "text": "Can I edit admin comments?"
+        }
+        request(app)
+            .put('/forumMessages/' + message1ID)
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                expect(res.status).to.equal(403)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
     it("Another user message for testing purposes", function(done) {
         var message = {
             "forumThreadID": testForumID,
@@ -385,6 +389,93 @@ describe("[TEST] Testing forumMessage functionalities", function() {
             .end(function(err, res) {
                 message3ID = res.body._id
                 expect(res.status).to.equal(201)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Try to add the same message twice (409 - conflict)", function(done) {
+        var message = {
+            "forumThreadID": testForumID,
+            "title": "What is it about",
+            "text": "Can I add the same message twice?"
+        }
+        request(app)
+            .post('/forumMessages')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                expect(res.status).to.equal(409)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Try to add a message without a title (400 - bad request)", function(done) {
+        var message = {
+            "forumThreadID": testForumID,
+            "text": "This message has no title"
+        }
+        request(app)
+            .post('/forumMessages')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                expect(res.status).to.equal(400)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Try to add a message without a forumThreadID (400 - bad request)", function(done) {
+        var message = {
+            "title": "No ForumThreadID",
+            "text": "Does this work out?"
+        }
+        request(app)
+            .post('/forumMessages')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                expect(res.status).to.equal(400)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Try to add a message without a text (400 - bad request)", function(done) {
+        var message = {
+            "forumThreadID": testForumID,
+            "title": "Who needs a text anyways?",
+        }
+        request(app)
+            .post('/forumMessages')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                expect(res.status).to.equal(400)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Get message by ID", function(done) {
+        var message = {
+            "forumThreadID": testForumID,
+            "title": "What is it about",
+            "text": "By the way, what is this Forum actually good for?"
+        }
+        request(app)
+            .get('/forumMessages/' + message3ID)
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
                 done()
@@ -457,112 +548,11 @@ describe("[TEST] Testing forumMessage functionalities", function() {
                 done()
             })
     })
-})
 
-/*
-describe("[TEST] Testing comment functionalities", function() {
-    it("Comment on message Welcome Manni as manfred", function(done) {
-        var message = {
-            "messageTitle": "Welcome Manni",
-            "commentText": "Why can't I delete messages? @admin"
-        }
+    it("get all messages of Test Forum by URL /forumThreads/:id/forumMessages", function(done) {
         request(app)
-            .post('/comment')
-            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send(message)
-            .end(function(err, res) {
-                expect(res.status).to.equal(200)
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Answer a comment as admin", function(done) {
-        var message = {
-            "messageTitle": "Welcome Manni",
-            "commentText": "Because you can only delete your own messages. @manfred"
-        }
-        request(app)
-            .post('/comment')
+            .get('/forumThreads/' + testForumID + '/forumMessages')
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
-            .send(message)
-            .end(function(err, res) {
-                expect(res.status).to.equal(200)
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Create another comment as manfred", function(done) {
-        var message = {
-            "messageTitle": "Welcome Manni",
-            "commentText": "Oh, I see."
-        }
-        request(app)
-            .post('/comment')
-            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send(message)
-            .end(function(err, res) {
-                expect(res.status).to.equal(200)
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("Modifying the last comment as admin", function(done) {
-        var message = {
-            "messageTitle": "Welcome Manni",
-            "commentText": "Oh, I see. Really?",
-            "commentNo": 3
-        }
-        request(app)
-            .post('/comment')
-            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
-            .send(message)
-            .end(function(err, res) {
-                expect(res.status).to.equal(200)
-
-                if(err) done(err)
-                done()
-            })
-    })
-
-    it("get all comments of Message Welcome Manni (should be 3 comments now)", function(done) {
-        request(app)
-            .post('/comment/getByMessageTitle')
-            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
-            .send({ messageTitle: "Welcome Manni" })
-            .end(function (err, res) {
-                expect(res.status).to.equal(200)
-                expect('content-type', 'application/json; charset=utf-8')
-                expect(Object.keys(res.body).length).to.equal(3)
-
-                if (err) done(err)
-                done()
-            })
-    })
-
-    it("delete last comment of Welcome Manni with user token (owner is user)", function(done) {
-        request(app)
-            .post('/comment/delete')
-            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send({ messageTitle: "Welcome Manni", commentNo: 3 })
-            .end(function (err, res) {
-                expect(res.status).to.equal(200)
-
-                if (err) done(err)
-                done()
-            })
-    })
-
-    it("get all comments of Message Welcome Manni (should be 2 comments now)", function(done) {
-        request(app)
-            .post('/comment/getByMessageTitle')
-            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
-            .send({ messageTitle: "Welcome Manni" })
             .end(function (err, res) {
                 expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -573,10 +563,243 @@ describe("[TEST] Testing comment functionalities", function() {
             })
     })
 })
-*/
+
+var comment1ID = ''
+var comment2ID = ''
+var comment3ID = ''
+describe("[TEST] Testing comment functionalities", function() {
+    it("Comment on message Welcome Manni as manfred", function(done) {
+        var message = {
+            "messageID": message1ID,
+            "text": "Why can't I delete messages? @admin"
+        }
+        request(app)
+            .post('/comments')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                comment1ID = res.body._id
+                expect(res.status).to.equal(201)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Answer a comment as admin", function(done) {
+        var message = {
+            "messageID": message1ID,
+            "text": "Because you can only delete your own messages. @manfred"
+        }
+        request(app)
+            .post('/comments')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                comment2ID = res.body._id
+                expect(res.status).to.equal(201)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Create another comment as manfred", function(done) {
+        var message = {
+            "messageID": message1ID,
+            "text": "Oh, I see."
+        }
+        request(app)
+            .post('/comments')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                comment3ID = res.body._id
+                expect(res.status).to.equal(201)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Modifying the last comment as admin", function(done) {
+        var message = {
+            "text": "Oh, I see. Really?"
+        }
+        request(app)
+            .put('/comments/' + comment3ID)
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(message)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("get all comments of Message Welcome Manni (should be 3 comments now)", function(done) {
+        request(app)
+            .get('/comments/?messageID=' + message1ID)
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .end(function (err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(3)
+
+                if (err) done(err)
+                done()
+            })
+    })
+
+    it("get all comments of manfred (should be 2 comments now)", function(done) {
+        request(app)
+            .get('/comments/?authorID="manfred')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .end(function (err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(2)
+
+                if (err) done(err)
+                done()
+            })
+    })
+
+    it("delete last comment of Welcome Manni with user token (owner is user)", function(done) {
+        request(app)
+            .delete('/comments/' + comment3ID)
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function (err, res) {
+                expect(res.status).to.equal(200)
+
+                if (err) done(err)
+                done()
+            })
+    })
+
+    it("get all comments of Message Welcome Manni (should be 2 comments now)", function(done) {
+        request(app)
+            .get('/forumMessages/' + message1ID + '/comments')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function (err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(2)
+
+                if (err) done(err)
+                done()
+            })
+    })
+
+    it("Create a duplicate comment - no issues here", function(done) {
+        var comment = {
+            "messageID": message1ID,
+            "text": "Why can't I delete messages? @admin"
+        }
+        request(app)
+            .post('/comments')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(comment)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Create a message without messageID (400 - bad request)", function(done) {
+        var comment = {
+            "text": "Random comment"
+        }
+        request(app)
+            .post('/comments')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(comment)
+            .end(function(err, res) {
+                expect(res.status).to.equal(400)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Create a comment without text (400 - bad request)", function(done) {
+        var comment = {
+            "messageID": message1ID
+        }
+        request(app)
+            .post('/comments')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(comment)
+            .end(function(err, res) {
+                expect(res.status).to.equal(400)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("get all comments of Message Welcome Manni (should be 3 comments now)", function(done) {
+        request(app)
+            .get('/comments/?messageID=' + message1ID)
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function (err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(3)
+
+                if (err) done(err)
+                done()
+            })
+    })
+
+    it("get all comments of manfred (should be 2 comments now)", function(done) {
+        request(app)
+            .get('/comments/?authorID="manfred"')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .end(function (err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(2)
+
+                if (err) done(err)
+                done()
+            })
+    })
+})
 
 describe("[CLEANUP] Cleaning up database", function() {
-    it("Removing test forumThreads from database", function(done) {
+    it("get all forums (should be 1 now)", function(done) {
+        request(app)
+            .get('/forumThreads')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .end(function (err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(1)
+
+                if (err) done(err)
+                done()
+            })
+    })
+
+    it("get all messages (should be 2 now)", function(done) {
+        request(app)
+            .get('/forumThreads/' + testForumID + '/forumMessages')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .end(function (err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(2)
+
+                if (err) done(err)
+                done()
+            })
+    })
+
+    it("Removing test forumThread from database", function(done) {
         request(app)
             .delete('/forumThreads/' + testForumID)
             .set('Authorization', adminToken)
@@ -653,6 +876,18 @@ describe("[CLEANUP] Cleaning up database", function() {
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
 
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Cleanup recheck: user count should be 0 by now", function(done) {
+        request(app)
+            .get('/publicUser')
+            .end(function(err, res) {
+                expect(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(Object.keys(res.body).length).to.equal(0)
                 if(err) done(err)
                 done()
             })

@@ -8,7 +8,7 @@ describe('/publicUser endpoint Tests', function() {
 })
 
 describe('/authentication and /users endpoint Tests', function() {
-    logger.info("Starting automated /authentication and /users endpoint tests")
+    logger.info("Starting automated /authentication, /users and /signup endpoint tests")
     require('./userTests/userTests')
 })
 

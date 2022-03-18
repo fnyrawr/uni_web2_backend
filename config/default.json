@@ -7,6 +7,12 @@
     "tokenKey": "checkYourselfBeforeYouWreckYourself",
     "timeout": 3600
   },
+  "mailConfig": {
+    "host": "smtp.mailtrap.io",
+    "port": 2525,
+    "user": "247b592a89e9d0",
+    "pass": "2896b1a7f2b0f6"
+  },
   "db": {
     "dbConfigOptions": {
       "useNewUrlParser": true,

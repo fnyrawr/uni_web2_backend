@@ -5,6 +5,42 @@ var logger = require('../../config/winston')
 var forumMessageService = require("./ForumMessageService")
 var authenticationService = require("../authentication/AuthenticationService")
 const userService = require("../user/UserService")
+var commentService = require("../comments/CommentsService")
+
+// get comments for messageID
+router.get('/:id/comments', function (req, res, next) {
+    commentService.getComments({},function (err, result) {
+        if(err) {
+            // 500: internal server error
+            logger.error(err)
+            return res.status(500).send(err)
+        }
+        else {
+            // 200: OK
+            logger.debug("found comments " + result)
+            return res.status(200).send(Object.values(result))
+        }
+    })
+})
+
+// get by ID
+router.get('/:id', function(req, res, next) {
+    // extract filters from query
+    let filters = { _id: req.params.id }
+
+    forumMessageService.getForumMessages(filters,function (err, result) {
+        if(err) {
+            // 500: internal server error
+            logger.error(err)
+            return res.status(500).send(err)
+        }
+        else {
+            // 200: OK
+            logger.debug("found messages " + result)
+            return res.status(200).send(Object.values(result))
+        }
+    })
+})
 
 // get all forumThreads messages
 router.get('/*', function(req, res, next) {
@@ -38,7 +74,7 @@ router.post('/', authenticationService.isAuthenticated, function(req, res, next)
     if(req.body.title) newMessage.title = req.body.title
     if(req.body.text) newMessage.text =  req.body.text
     
-    if(newMessage.title) {
+    if(newMessage.title && newMessage.forumThreadID && newMessage.text) {
         forumMessageService.findMessageByTitle(newMessage.title, function (err, message) {
             if(message) {
                 // 409: conflict
@@ -89,7 +125,7 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
         forumMessageService.findMessageByID(searchMessageID, function (err, message) {
             // update message
             if (message) {
-                logger.debug("Message already exists, trying to update properties")
+                logger.debug("Message exists, trying to update properties")
                 authenticationService.getUserFromToken(req, function (err, user) {
                     if (user) {
                         userService.getIsAdmin(user, (err, adminStatus) => {
@@ -129,7 +165,7 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
             }
             else {
                 // 404: not found
-                logger.error("Could not find message with the title " + searchMessageID + ": " + err)
+                logger.error("Could not find message with id " + searchMessageID + ": " + err)
                 res.status(404).send({ error: err })
             }
         })

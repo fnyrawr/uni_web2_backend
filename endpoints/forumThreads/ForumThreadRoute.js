@@ -2,9 +2,26 @@ var express = require('express')
 var router = express.Router()
 var logger = require('../../config/winston')
 
+var forumMessageService = require("../forumMessage/ForumMessageService")
 var forumService = require("./ForumThreadService")
 var authenticationService = require("../authentication/AuthenticationService")
 const userService = require("../user/UserService")
+
+// get messages for forumThreadID
+router.get('/:id/forumMessages', function (req, res, next) {
+    forumMessageService.getForumMessages({},function (err, result) {
+        if(err) {
+            // 500: internal server error
+            logger.error(err)
+            return res.status(500).send(err)
+        }
+        else {
+            // 200: OK
+            logger.debug("found messages " + result)
+            return res.status(200).send(Object.values(result))
+        }
+    })
+})
 
 // get all forums
 router.get('/*', function(req, res, next) {

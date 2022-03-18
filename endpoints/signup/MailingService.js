@@ -11,11 +11,11 @@ const logger = require("../../config/winston")
 
 // methods for confirmation process
 const emailTransport = nodemailer.createTransport({
-    host: "smtp.mailtrap.io", //config.get("mailConfig.host"),
-    port: 2525, //config.get("mailConfig.port"),
+    host: config.get("mailConfig.host"),
+    port: config.get("mailConfig.port"),
     auth: {
-        user: "247b592a89e9d0", //config.get("mailConfig.user"),
-        pass: "2896b1a7f2b0f6", //config.get("mailConfig.password")
+        user: config.get("mailConfig.user"),
+        pass: config.get("mailConfig.pass")
     }
 })
 
@@ -30,7 +30,7 @@ function sendConfirmationEmail(user, email, confirmationToken) {
         if (err) {
             logger.error("Error while trying to send confirmation mail: " + err)
         }
-        logger.info('Preview URL of confirmationEmail: ' + nodemailer.getTestMessageUrl(url))
+        logger.info('Sending of confirmation mail to user ' + user + ' succeeded')
     })
 }
 

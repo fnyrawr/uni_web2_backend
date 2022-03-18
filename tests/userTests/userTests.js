@@ -1,8 +1,11 @@
 const request = require('supertest')
 const app = require('../../httpServer')
+const config = require("config");
+const jwt = require("jsonwebtoken");
 const expect = require('chai').expect
 
 var adminToken = ""
+var userToken = ""
 describe("[TEST] /authenticate - testing login with Basic authentication", function() {
     it("Trying to create a token using correct credentials to create adminToken", function(done) {
         request(app)
@@ -120,7 +123,6 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             })
     })
 
-    var userToken = ""
     it("Logging in as Stefan Stecher to create userToken", function(done) {
         request(app)
             .post('/authenticate')
@@ -342,9 +344,103 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
                 done()
             })
     })
+
+    var confirmationToken = ""
+    it("Create manfred via signup", function(done) {
+        var manfred = {
+            "userID": "manfred",
+            "userName": "Manfred Müller",
+            "password": "asdf",
+            "email": "trashmehard@existiert.net"
+        }
+        // recreate token for testing purposes
+        var issuedAt = new Date().getTime()
+        var expirationTime = config.get('verification.timeout')
+        var expiresAt = issuedAt + (expirationTime * 1000)
+        var privateKey = config.get('verification.tokenKey')
+        confirmationToken = Buffer.from(jwt.sign({ "email": "trashmehard@existiert.net" }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
+        request(app)
+            .post('/signup')
+            .set({ 'content-type': 'application/json' })
+            .send(manfred)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Try to create a token for manfred (not verified yet) - expecting 403 status code (error) here", function(done) {
+        request(app)
+            .post('/authenticate')
+            .set('Authorization', 'Basic ' + Buffer.from("manfred:asdf").toString("base64"))
+            .end(function(err, res) {
+                expect(403)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Verify manfred with confirmationToken", function(done) {
+        var route = '/signup/confirm/' + confirmationToken
+        request(app)
+            .get(route)
+            .set({ 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Creating token for manfred", function(done) {
+        request(app)
+            .post('/authenticate')
+            .set('Authorization', 'Basic ' + Buffer.from("manfred:asdf").toString("base64"))
+            .end(function(err, res) {
+                expect(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                userToken = res.header.authorization
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Try to verify manfred with confirmationToken for a 2nd time - should throw a 400 status code (bad request) here", function(done) {
+        request(app)
+            .get('/signup/confirm/' + confirmationToken)
+            .set({ 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(400)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
 })
 
 describe("[CLEANUP] Cleaning up database", function() {
+    it("Removing manfred from database", function(done) {
+        request(app)
+            .delete('/users/manfred')
+            .set('Authorization', userToken)
+            .set('content-type', 'application/json')
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+
+                if(err) done(err)
+                done()
+            })
+    })
+
     it("Removing admin from database", function(done) {
         request(app)
             .delete('/users/admin')
