@@ -57,7 +57,7 @@ router.post('/', authenticationService.isAuthenticated, function(req, res, next)
 
     if(newComment.messageID && newComment.text) {
         logger.debug("Creating new comment now")
-        authenticationService.getUserFromToken(req, function(err, user) {
+        userService.getUserFromToken(req, function(err, user) {
             if(err) {
                 // 500: internal server error
                 logger.error("Could not get User from token: " + err)
@@ -97,35 +97,29 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
         commentService.findCommentByID(searchCommentID, function (err, comment) {
             logger.debug("Comment exists, trying to update properties")
             if(comment) {
-                authenticationService.getUserFromToken(req, function (err, user) {
+                userService.getUserFromToken(req, function (err, user) {
                     if(user) {
-                        userService.getIsAdmin(user, (err, adminStatus) => {
-                            if(err) {
-                                // 500: internal server error
-                                logger.error("Failed trying to read if user is admin")
-                                res.status(500).send({ error: err })
-                            } else {
-                                logger.debug("is " + user + " admin? " + adminStatus + " | comment author: " + comment.authorID)
-                                if(adminStatus === true || comment.authorID === user) {
-                                    commentService.updateOne(comment, updatedComment, user, function (err, comment) {
-                                        if(comment) {
-                                            // 201: created
-                                            logger.info("Updated Comment: " + JSON.stringify(comment))
-                                            res.status(201).json(comment).send()
-                                        }
-                                        else {
-                                            // 500: internal server error
-                                            logger.error("Error while updating comment: " + err)
-                                            res.status(500).json({ error: err })
-                                        }
-                                    })
-                                } else {
-                                    logger.warn("Error: Not enough rights to modify")
-                                    res.status(403).json({ error: "Permission denied: Not enough rights" })
+                        logger.debug("is " + user.userID + " admin? " + user.isAdministrator + " | comment author: " + comment.authorID)
+                        if(user.isAdministrator === true || comment.authorID === user.userID) {
+                            commentService.updateOne(comment, updatedComment, user, function (err, comment) {
+                                if(comment) {
+                                    // 201: created
+                                    logger.info("Updated Comment: " + JSON.stringify(comment))
+                                    res.status(201).json(comment).send()
                                 }
-                            }
-                        })
-                    } else {
+                                else {
+                                    // 500: internal server error
+                                    logger.error("Error while updating comment: " + err)
+                                    res.status(500).json({ error: err })
+                                }
+                            })
+                        }
+                        else {
+                            logger.warn("Error: Not enough rights to modify")
+                            res.status(403).json({ error: "Permission denied: Not enough rights" })
+                        }
+                    }
+                    else {
                         // 404: not found
                         logger.error("Could not find comment with id " + searchCommentID + ": " + err)
                         res.status(404).send({ error: err })
@@ -149,40 +143,38 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
 router.delete('/:id', authenticationService.isAuthenticated, function(req, res, next){
     const { id } = req.params
     if(id) {
-        authenticationService.getUserFromToken(req, function (err, user) {
+        userService.getUserFromToken(req, function (err, user) {
             if(err) {
                 res.status(500).json({ error: "Could not get User" })
             }
             // only delete if user is author or admin
-            userService.getIsAdmin(user, function (err, adminStatus) {
-                commentService.findCommentByID(id, function(err, comment) {
-                    if(comment) {
-                        if(comment.authorID === user || adminStatus) {
-                            commentService.deleteOne(comment, function(err, deleted) {
-                                if(err) {
-                                    // 500: internal server error
-                                    logger.error("Error while deleting Comment: " + err)
-                                    res.status(500).send({ error: err })
-                                }
-                                else {
-                                    // 200: OK
-                                    logger.info("Deleted Comment with id " + id)
-                                    res.status(200).send({ "Success": "Deleted Comment with id " + id })
-                                }
-                            })
-                        }
-                        else {
-                            // 403: forbidden
-                            logger.error("Not enough rights to delete comment: " + err)
-                            res.status(403).send({ error: err })
-                        }
+            commentService.findCommentByID(id, function(err, comment) {
+                if(comment) {
+                    if(comment.authorID === user.userID || user.isAdministrator) {
+                        commentService.deleteOne(comment, function(err, deleted) {
+                            if(err) {
+                                // 500: internal server error
+                                logger.error("Error while deleting Comment: " + err)
+                                res.status(500).send({ error: err })
+                            }
+                            else {
+                                // 200: OK
+                                logger.info("Deleted Comment with id " + id)
+                                res.status(200).send({ "Success": "Deleted Comment with id " + id })
+                            }
+                        })
                     }
                     else {
-                        // 404: not found
-                        logger.error("Deletion of comment with id: " + title + " failed: id not found")
-                        res.status(404).send({ error: err })
+                        // 403: forbidden
+                        logger.error("Not enough rights to delete comment: " + err)
+                        res.status(403).send({ error: err })
                     }
-                })
+                }
+                else {
+                    // 404: not found
+                    logger.error("Deletion of comment with id: " + title + " failed: id not found")
+                    res.status(404).send({ error: err })
+                }
             })
         })
     }

@@ -63,63 +63,45 @@ router.put('/:userID', authenticationService.isAuthenticated, function(req, res,
     // check if searchUserID is defined
     const searchUserID = req.params.userID
     if(searchUserID) {
-        // get requesting username
-        authenticationService.getUserFromToken(req, function (err, requestingUserID) {
+        // get requesting user
+        userService.getUserFromToken(req, function (err, requestingUser) {
             if (err) {
                 // 404: not found
                 logger.error("Could not find requesting user from token: " + err)
                 res.status(404).json({ error: err })
             }
             else {
-                // get the object of the requesting user for detailed checks later
-                userService.findUserBy(requestingUserID, function (err, requestingUser) {
-                    if (err) {
-                        // 404: not found
-                        logger.error("Could not resolve requesting user in database: " + err)
-                        res.status(404).json({ error: err })
+                // try to find user
+                userService.findUserBy(searchUserID, function (err, user) {
+                    if(user) {
+                        logger.debug("Found user, trying to update properties")
+                        // update user if requesting user is the user to be modified OR if requester is admin
+                        if (requestingUser.isAdministrator || requestingUser.userID === user.userID) {
+                            userService.updateOne(user, req.body, requestingUser.isAdministrator, function (err, user) {
+                                if (user) {
+                                    // 201: created
+                                    const { id, userID, userName, email, isVerified, isAdministrator, ...partialObject } = user
+                                    const subset = { id, userID, userName, email, isVerified, isAdministrator }
+                                    logger.info("Updated User: " + JSON.stringify(subset))
+                                    res.status(201).json(subset).send()
+                                }
+                                else {
+                                    // 500: internal server error
+                                    logger.error("Error while updating User: " + err)
+                                    res.status(500).send({ error: err })
+                                }
+                            })
+                        }
+                        else {
+                            // 403: forbidden
+                            logger.error("Error while updating User: " + err)
+                            res.status(403).send({ error: err })
+                        }
                     }
                     else {
-                        // try to find user
-                        userService.findUserBy(searchUserID, function (err, user) {
-                            if(user) {
-                                logger.debug("Found user, trying to update properties")
-                                userService.getIsAdmin(requestingUser.userID, function (err, adminStatus) {
-                                    if (err) {
-                                        // 500: internal server error
-                                        logger.error("Error while updating User: " + err)
-                                        res.status(500).json({ error: err })
-                                    }
-                                    else {
-                                        // update user if requesting user is the user to be modified OR if requester is admin
-                                        if (adminStatus || requestingUser.userID === user.userID) {
-                                            userService.updateOne(user, req.body, adminStatus, function (err, user) {
-                                                if (user) {
-                                                    // 201: created
-                                                    const { id, userID, userName, email, isVerified, isAdministrator, ...partialObject } = user
-                                                    const subset = { id, userID, userName, email, isVerified, isAdministrator }
-                                                    logger.info("Updated User: " + JSON.stringify(subset))
-                                                    res.status(201).json(subset).send()
-                                                }
-                                                else {
-                                                    // 500: internal server error
-                                                    logger.error("Error while updating User: " + err)
-                                                    res.status(500).send({ error: err })
-                                                }
-                                            })
-                                        } else {
-                                            // 403: forbidden
-                                            logger.error("Error while updating User: " + err)
-                                            res.status(403).send({ error: err })
-                                        }
-                                    }
-                                })
-                            }
-                            else {
-                                // 404: not found
-                                logger.error("Failed updating user with userID " + searchUserID + ": " + err)
-                                res.status(404).send({ error: err })
-                            }
-                        })
+                        // 404: not found
+                        logger.error("Failed updating user with userID " + searchUserID + ": " + err)
+                        res.status(404).send({ error: err })
                     }
                 })
             }
@@ -138,60 +120,41 @@ router.delete('/:userID', authenticationService.isAuthenticated, function(req, r
     const searchUserID = req.params.userID
     if(searchUserID) {
         // get requesting username
-        authenticationService.getUserFromToken(req, function (err, requestingUserID) {
+        userService.getUserFromToken(req, function (err, requestingUser) {
             if (err) {
                 // 404: not found
                 logger.error("Could not find requesting user from token: " + err)
                 res.status(404).json({ error: err })
             }
             else {
-                // get the object of the requesting user for detailed checks later
-                userService.findUserBy(requestingUserID, function (err, requestingUser) {
-                    if (err) {
-                        // 404: not found
-                        logger.error("Could not resolve requesting user in database: " + err)
-                        res.status(404).json({ error: err })
+                // try to find user
+                userService.findUserBy(searchUserID, function (err, user) {
+                    if (user) {
+                        logger.debug("Found user, trying to delete")
+                        // delete user if requesting user is the user to be modified OR if requester is admin
+                        if (requestingUser.isAdministrator || requestingUser.userID === user.userID) {
+                            userService.deleteOne(user.userID, function (err, result) {
+                                if(err) {
+                                    // 500: internal server error
+                                    logger.error("Error while deleting User: " + err)
+                                    res.status(500).send({ error: err })
+                                }
+                                else {
+                                    // 200: OK
+                                    logger.info("User deleted - " + result)
+                                    res.status(200).send({ "Success": "Deleted User with userID " + searchUserID })
+                                }
+                            })
+                        } else {
+                            // 403: forbidden
+                            logger.error("Error while updating User: " + err)
+                            res.status(403).send({ error: err })
+                        }
                     }
                     else {
-                        // try to find user
-                        userService.findUserBy(searchUserID, function (err, user) {
-                            if (user) {
-                                logger.debug("Found user, trying to delete")
-                                userService.getIsAdmin(requestingUser.userID, function (err, adminStatus) {
-                                    if (err) {
-                                        // 500: internal server error
-                                        logger.error("Error while updating User: " + err)
-                                        res.status(500).json({ error: err })
-                                    }
-                                    else {
-                                        // delete user if requesting user is the user to be modified OR if requester is admin
-                                        if (adminStatus || requestingUser.userID === user.userID) {
-                                            userService.deleteOne(user.userID, function (err, result) {
-                                                if(err) {
-                                                    // 500: internal server error
-                                                    logger.error("Error while deleting User: " + err)
-                                                    res.status(500).send({ error: err })
-                                                }
-                                                else {
-                                                    // 200: OK
-                                                    logger.info("User deleted - " + result)
-                                                    res.status(200).send({ "Success": "Deleted User with userID " + searchUserID })
-                                                }
-                                            })
-                                        } else {
-                                            // 403: forbidden
-                                            logger.error("Error while updating User: " + err)
-                                            res.status(403).send({ error: err })
-                                        }
-                                    }
-                                })
-                            }
-                            else {
-                                // 404: not found
-                                logger.error("Failed updating user with userID " + searchUserID + ": " + err)
-                                res.status(404).send({ error: err })
-                            }
-                        })
+                        // 404: not found
+                        logger.error("Failed updating user with userID " + searchUserID + ": " + err)
+                        res.status(404).send({ error: err })
                     }
                 })
             }
@@ -210,53 +173,34 @@ router.get('/:userID', authenticationService.isAuthenticated, function(req, res,
     const searchUserID = req.params.userID
     if(searchUserID) {
         // get requesting username
-        authenticationService.getUserFromToken(req, function (err, requestingUserID) {
+        userService.getUserFromToken(req, function (err, requestingUser) {
             if (err) {
                 // 404: not found
                 logger.error("Could not find requesting user from token: " + err)
                 res.status(404).json({ error: err })
             }
             else {
-                // get the object of the requesting user for detailed checks later
-                userService.findUserBy(requestingUserID, function (err, requestingUser) {
-                    if (err) {
-                        // 404: not found
-                        logger.error("Could not resolve requesting user in database: " + err)
-                        res.status(404).json({ error: err })
+                // try to find user
+                userService.findUserBy(searchUserID, function (err, user) {
+                    if (user) {
+                        logger.debug("Found user")
+                        // only send data if requesting user is admin or the user himself
+                        if (requestingUser.isAdministrator || requestingUser.userID === user.userID) {
+                            // 200: OK
+                            const { id, userID, userName, email, isVerified, isAdministrator, ...partialObject } = user
+                            const subset = { id, userID, userName, email, isVerified, isAdministrator }
+                            logger.debug("Result: " + subset)
+                            res.status(200).json(subset).send()
+                        } else {
+                            // 403: forbidden
+                            logger.error("Error while getting User: " + err)
+                            res.status(403).send({ error: err })
+                        }
                     }
                     else {
-                        // try to find user
-                        userService.findUserBy(searchUserID, function (err, user) {
-                            if (user) {
-                                logger.debug("Found user, trying to update properties")
-                                userService.getIsAdmin(requestingUser.userID, function (err, adminStatus) {
-                                    if (err) {
-                                        // 500: internal server error
-                                        logger.error("Error while updating User: " + err)
-                                        res.status(500).json({ error: err })
-                                    }
-                                    else {
-                                        // only send data if requesting user is admin or the user himself
-                                        if (adminStatus || requestingUser.userID === user.userID) {
-                                            // 200: OK
-                                            const { id, userID, userName, email, isVerified, isAdministrator, ...partialObject } = user
-                                            const subset = { id, userID, userName, email, isVerified, isAdministrator }
-                                            logger.debug("Result: " + subset)
-                                            res.status(200).json(subset).send()
-                                        } else {
-                                            // 403: forbidden
-                                            logger.error("Error while getting User: " + err)
-                                            res.status(403).send({ error: err })
-                                        }
-                                    }
-                                })
-                            }
-                            else {
-                                // 404: not found
-                                logger.error("Failed fetching user for userID " + searchUserID + ": " + err)
-                                res.status(404).send({ error: err })
-                            }
-                        })
+                        // 404: not found
+                        logger.error("Failed fetching user for userID " + searchUserID + ": " + err)
+                        res.status(404).send({ error: err })
                     }
                 })
             }

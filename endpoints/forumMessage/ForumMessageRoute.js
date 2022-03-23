@@ -84,7 +84,7 @@ router.post('/', authenticationService.isAuthenticated, function(req, res, next)
             // create message
             else {
                 logger.debug("Message does not exist yet, creating now")
-                authenticationService.getUserFromToken(req, function (err, user) {
+                userService.getUserFromToken(req, function (err, user) {
                     if(err) {
                         // 500: internal server error
                         logger.error("Could not get User from token: " + err)
@@ -124,37 +124,29 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
     if(searchMessageID) {
         forumMessageService.findMessageByID(searchMessageID, function (err, message) {
             // update message
-            if (message) {
+            if(message) {
                 logger.debug("Message exists, trying to update properties")
-                authenticationService.getUserFromToken(req, function (err, user) {
-                    if (user) {
-                        userService.getIsAdmin(user, (err, adminStatus) => {
-                            if(err) {
-                                // 500: internal server error
-                                logger.error("Failed trying to read if user is admin")
-                                res.status(500).send({ error: err })
-                            }
-                            else {
-                                logger.debug("is " + user + " admin? " + adminStatus + " | message author: " + message.authorID)
-                                if (adminStatus === true || message.authorID === user) {
-                                    forumMessageService.updateOne(message, updatedMessage, user, function (err, message) {
-                                        if (message) {
-                                            // 201: created
-                                            logger.info("Updated Message: " + JSON.stringify(message))
-                                            res.status(201).json(message).send()
-                                        }
-                                        else {
-                                            // 500: internal server error
-                                            logger.error("Error while updating message: " + err)
-                                            res.status(500).json({ error: err })
-                                        }
-                                    })
-                                } else {
-                                    logger.warn("Error: Not enough rights to modify")
-                                    res.status(403).json({ error: "Permission denied: Not enough rights" })
+                userService.getUserFromToken(req, function (err, user) {
+                    if(user) {
+                        logger.debug("is " + user + " admin? " + user.isAdministrator + " | message author: " + message.authorID)
+                        if (user.isAdministrator === true || message.authorID === user.userID) {
+                            forumMessageService.updateOne(message, updatedMessage, user, function (err, message) {
+                                if (message) {
+                                    // 201: created
+                                    logger.info("Updated Message: " + JSON.stringify(message))
+                                    res.status(201).json(message).send()
                                 }
-                            }
-                        })
+                                else {
+                                    // 500: internal server error
+                                    logger.error("Error while updating message: " + err)
+                                    res.status(500).json({ error: err })
+                                }
+                            })
+                        }
+                        else {
+                            logger.warn("Error: Not enough rights to modify")
+                            res.status(403).json({ error: "Permission denied: Not enough rights" })
+                        }
                     }
                     else {
                         // 404: not found
@@ -181,40 +173,38 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
 router.delete('/:id', authenticationService.isAuthenticated, function(req, res, next){
     const { id } = req.params
     if(id) {
-        authenticationService.getUserFromToken(req, function (err, user) {
+        userService.getUserFromToken(req, function (err, user) {
             if(err) {
                 res.status(500).json({ error: "Could not get User" })
             }
             // only delete if user is author or admin
-            userService.getIsAdmin(user, function (err, adminStatus) {
                 forumMessageService.findMessageByID(id, function(err, message) {
-                    if(message) {
-                        if(message.authorID === user || adminStatus) {
-                            forumMessageService.deleteOne(message, function(err, deleted) {
-                                if(err) {
-                                    // 500: internal server error
-                                    logger.error("Error while deleting Message: " + err)
-                                    res.status(500).send({ error: err })
-                                }
-                                else {
-                                    // 200: OK
-                                    logger.info("Deleted Message with id " + id)
-                                    res.status(200).send({ "Success": "Deleted Message with id " + id })
-                                }
-                            })
-                        }
-                        else {
-                            // 403: forbidden
-                            logger.error("Not enough rights to delete message: " + err)
-                            res.status(403).send({ error: err })
-                        }
+                if(message) {
+                    if(message.authorID === user.userID || user.isAdministrator) {
+                        forumMessageService.deleteOne(message, function(err, deleted) {
+                            if(err) {
+                                // 500: internal server error
+                                logger.error("Error while deleting Message: " + err)
+                                res.status(500).send({ error: err })
+                            }
+                            else {
+                                // 200: OK
+                                logger.info("Deleted Message with id " + id)
+                                res.status(200).send({ "Success": "Deleted Message with id " + id })
+                            }
+                        })
                     }
                     else {
-                        // 404: not found
-                        logger.error("Deletion of message with id: " + title + " failed: id not found")
-                        res.status(404).send({ error: err })
+                        // 403: forbidden
+                        logger.error("Not enough rights to delete message: " + err)
+                        res.status(403).send({ error: err })
                     }
-                })
+                }
+                else {
+                    // 404: not found
+                    logger.error("Deletion of message with id: " + title + " failed: id not found")
+                    res.status(404).send({ error: err })
+                }
             })
         })
     }

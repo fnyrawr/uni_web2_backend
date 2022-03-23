@@ -28,7 +28,8 @@ function createSessionToken(props, callback) {
                         var expirationTime = config.get('session.timeout')
                         var expiresAt = issuedAt + (expirationTime * 1000)
                         var privateKey = config.get('session.tokenKey')
-                        let token = jwt.sign({ "user": user.userID }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })
+                        let token = jwt.sign({ userID: user.userID, userName: user.user, isAdministrator: user.isAdministrator },
+                            privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })
 
                         logger.info("Token for user " + props.userID + " created: " + token)
 
@@ -60,7 +61,7 @@ function isAuthenticated(req, res, next) {
                 return
             }
             // return of verify is no user object but only the username in user.user
-            userService.findUserBy(user.user, function(err, user) {
+            userService.findUserBy(user.userID, function(err, user) {
                 if(err) {
                     logger.warn("Error 401: not authorized - " + err)
                     res.status(401).json({ error: "not authorized: could not find user to authorize" })
@@ -84,7 +85,7 @@ function isAuthenticated(req, res, next) {
 
 // check if user is authenticated and admin
 function isAdministrator(req, res, next) {
-    if(typeof req.headers.authorization != "undefined") {
+    if(typeof req.headers.authorization !== "undefined") {
         let token = req.headers.authorization.split(" ")[1]
         var privateKey = config.get('session.tokenKey')
         jwt.verify(token, privateKey, { algorithm: "HS256" }, (err, user) => {
@@ -93,20 +94,14 @@ function isAdministrator(req, res, next) {
                 res.status(401).json({ error: "not authorized" })
                 return
             }
-            userService.getIsAdmin(user.user, function(err, isAdmin) {
-                logger.debug(`user ${user.user} is admin: ${ isAdmin }`)
-                if (err) {
-                    logger.warn('500: access denied')
-                    res.status(500).json({ error: "could not get admin status" })
-                    return
-                }
-                if (isAdmin) {
+            else {
+                if (user.isAdministrator) {
                     return next()
                 } else {
                     logger.warn('403: access denied')
                     res.status(403).json({ error: "access denied" })
                 }
-            })
+            }
         })
     } else {
         logger.warn('401: not authorized - no headers set')
@@ -114,30 +109,8 @@ function isAdministrator(req, res, next) {
     }
 }
 
-// get user from token
-function getUserFromToken(req, callback) {
-    if(typeof req.headers.authorization != "undefined") {
-        let token = req.headers.authorization.split(" ")[1]
-        var privateKey = config.get('session.tokenKey')
-        jwt.verify(token, privateKey, { algorithm: "HS256" }, (err, user) => {
-            if (err) {
-                callback("Error: no valid token to extract user from", null)
-            }
-            else {
-                logger.debug("Request from user: " + user.user)
-                callback(null, user.user)
-            }
-        })
-    } else {
-        callback("undefined header, cannot identify user", null)
-    }
-}
-
-
-
 module.exports = {
     createSessionToken,
     isAuthenticated,
-    isAdministrator,
-    getUserFromToken
+    isAdministrator
 }

@@ -29,7 +29,10 @@ router.post('/', function(req, res, next) {
             if(user) {
                 // 200: OK
                 logger.info("Created token for user " + user.userID)
-                res.status(200).send({ "Success": "Token created successfully"})
+                const { id, userID, userName, email, isAdministrator, ...partialObject } = user
+                const subset = { id, userID, userName, email, isAdministrator }
+
+                res.status(200).send()
             }
             else {
                 // 500: internal server error

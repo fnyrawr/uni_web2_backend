@@ -295,6 +295,33 @@ function checkVerification(user) {
     }
 }
 
+// get user from token
+function getUserFromToken(req, callback) {
+    if(typeof req.headers.authorization != "undefined") {
+        let token = req.headers.authorization.split(" ")[1]
+        var privateKey = config.get('session.tokenKey')
+        jwt.verify(token, privateKey, { algorithm: "HS256" }, (err, user) => {
+            if (err) {
+                callback("Error: no valid token to extract user from", null)
+            }
+            else {
+                logger.debug("Request from user: " + user.userID)
+                findUserBy(user.userID, function (err, user) {
+                    if(err) {
+                        callback("Error: no user " + user.userID + " found", null)
+                    }
+                    else {
+                        callback(null, user)
+                    }
+                })
+            }
+        })
+    }
+    else {
+        callback("undefined header, cannot identify user", null)
+    }
+}
+
 module.exports = {
     getUsers,
     findUserBy,
@@ -305,5 +332,6 @@ module.exports = {
     verifyOne,
     deleteOne,
     deleteAllUsers,
-    checkVerification
+    checkVerification,
+    getUserFromToken
 }

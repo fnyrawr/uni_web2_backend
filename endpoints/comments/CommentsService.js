@@ -33,7 +33,7 @@ function findCommentByID(searchCommentID, callback) {
             }
             else {
                 if(comment) {
-                    logger.debug(`Found comment: ${searchCommentID}`)
+                    logger.debug(`Found comment: ${ searchCommentID }`)
                     callback(null, comment)
                 }
                 else {
@@ -66,7 +66,7 @@ function getCurrentCommentNo(searchMessageID, callback) {
 function insertOne(commentProps, user, callback) {
     logger.debug("Trying to create a new comment")
     // set owner according to props only if requester is admin, otherwise owner is user
-    var authorID = user
+    var authorID = user.userID
     var messageID = commentProps.messageID
     var text = commentProps.text
     var timestamp = new Date().toLocaleString()
@@ -105,35 +105,33 @@ function insertOne(commentProps, user, callback) {
 function updateOne(comment, commentProps, user, callback) {
     logger.debug("Trying to update comment from commentID " + comment._id)
     // set author according to props only if requester is admin, otherwise author is user
-    userService.getIsAdmin(user, (err, adminStatus) => {
-        var timestamp = new Date().toLocaleString()
+    var timestamp = new Date().toLocaleString()
 
-        // add note to message if edited by admin
-        var adminEdit = false
-        if(user != comment.authorID && adminStatus) {
-            logger.info("Comment " + comment._id + " of user " + comment.authorID + " edited by admin " + user)
-            adminEdit = true
-        }
+    // add note to message if edited by admin
+    var adminEdit = false
+    if(user.userID != comment.authorID && user.isAdministrator) {
+        logger.info("Comment " + comment._id + " of user " + comment.authorID + " edited by admin " + user)
+        adminEdit = true
+    }
 
-        if(comment && (!(user != comment.authorID) || adminEdit)) {
-            comment.edited = true
-            comment.editAuthor = user
-            comment.editTimestamp = timestamp
+    if(comment && (!(user.userID != comment.authorID) || adminEdit)) {
+        comment.edited = true
+        comment.editAuthor = user.userID
+        comment.editTimestamp = timestamp
 
-            comment.save(function(err, newComment) {
-                if(err) {
-                    logger.error("Could not update comment: " + err)
-                    return callback("Could not update comment: " + err, null)
-                }
-                else {
-                    return callback(null, newComment)
-                }
-            })
-        }
-        else {
-            return callback("Could not update comment: not enough rights", null)
-        }
-    })
+        comment.save(function(err, newComment) {
+            if(err) {
+                logger.error("Could not update comment: " + err)
+                return callback("Could not update comment: " + err, null)
+            }
+            else {
+                return callback(null, newComment)
+            }
+        })
+    }
+    else {
+        return callback("Could not update comment: not enough rights", null)
+    }
 }
 
 function deleteOne(comment, callback) {

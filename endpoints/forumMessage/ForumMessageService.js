@@ -105,7 +105,7 @@ function findMessageByID(searchMessageID, callback) {
 function insertOne(messageProps, user, callback) {
     logger.debug("Trying to create a new message")
     // set owner according to props only if requester is admin, otherwise owner is user
-    var authorID = user
+    var authorID = user.userID
     var forumThreadID = messageProps.forumThreadID
     var title = messageProps.title
     var text = messageProps.text
@@ -139,36 +139,34 @@ function insertOne(messageProps, user, callback) {
 function updateOne(message, messageProps, user, callback) {
     logger.debug("Trying to update message with messageTitle: " + message.title)
     // set author according to props only if requester is admin, otherwise author is user
-    userService.getIsAdmin(user, (err, adminStatus) => {
-        var timestamp = new Date().toLocaleString()
+    var timestamp = new Date().toLocaleString()
 
-        // add note to message if edited by admin
-        var adminEdit = false
-        if(user != message.authorID && adminStatus) {
-            logger.info("Message " + message.title + " of user " + message.authorID + " edited by admin " + user)
-            adminEdit = true
-        }
+    // add note to message if edited by admin
+    var adminEdit = false
+    if(user.userID != message.authorID && user.isAdministrator) {
+        logger.info("Message " + message.title + " of user " + message.authorID + " edited by admin " + user)
+        adminEdit = true
+    }
 
-        if(message && (!(user != message.authorID) || adminEdit)) {
-            message.text = messageProps.text
-            message.edited = true
-            message.editAuthor = user
-            message.editTimestamp = timestamp
+    if(message && (!(user.userID != message.authorID) || adminEdit)) {
+        message.text = messageProps.text
+        message.edited = true
+        message.editAuthor = user.userID
+        message.editTimestamp = timestamp
 
-            message.save(function(err, newMessage) {
-                if(err) {
-                    logger.error("Could not update message: " + err)
-                    return callback("Could not update message: " + err, null)
-                }
-                else {
-                    return callback(null, newMessage)
-                }
-            })
-        }
-        else {
-            return callback("Could not update message: not enough rights", null)
-        }
-    })
+        message.save(function(err, newMessage) {
+            if(err) {
+                logger.error("Could not update message: " + err)
+                return callback("Could not update message: " + err, null)
+            }
+            else {
+                return callback(null, newMessage)
+            }
+        })
+    }
+    else {
+        return callback("Could not update message: not enough rights", null)
+    }
 }
 
 function deleteOne(message, callback) {

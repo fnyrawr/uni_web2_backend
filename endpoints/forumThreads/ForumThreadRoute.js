@@ -48,14 +48,14 @@ router.get('/*', function(req, res, next) {
 
 // get all forums for user
 router.get('/myForumThreads', authenticationService.isAuthenticated, function(req, res, next) {
-    authenticationService.getUserFromToken(req, function(err, user) {
+    userService.getUserFromToken(req, function(err, user) {
         if(err) {
             // 500: internal server error
             logger.error(err)
             return res.status(500).send({ error: 'Could not find user for token' })
         }
         else {
-            forumService.findForumsByOwner(user, function (err, result) {
+            forumService.findForumsByOwner(user.userID, function (err, result) {
                 if (result) {
                     // 200: OK
                     logger.debug("found forums" + result)
@@ -88,7 +88,7 @@ router.post('/', authenticationService.isAuthenticated, function(req, res, next)
             else {
                 logger.debug("ForumThread does not exist yet, creating now")
                 // get requesting user from token
-                authenticationService.getUserFromToken(req, function (err, user) {
+                userService.getUserFromToken(req, function (err, user) {
                     if(err) {
                         // 500: internal server error
                         logger.error("Could not get User from token: " + err)
@@ -100,7 +100,8 @@ router.post('/', authenticationService.isAuthenticated, function(req, res, next)
                                 // 201: created
                                 logger.info(JSON.stringify(forum))
                                 res.status(201).json(forum).send()
-                            } else {
+                            }
+                            else {
                                 // 500: internal server error
                                 logger.error("Error while creating Forum: " + err)
                                 res.status(500).json({ error: "Could not create Forum" })
@@ -128,37 +129,28 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
             JSON.stringify(forum)
             if(forum) {
                 logger.debug("Forum exists, trying to update properties")
-                authenticationService.getUserFromToken(req, function (err, user) {
+                userService.getUserFromToken(req, function (err, user) {
                     if(user) {
-                        userService.getIsAdmin(user, function(err, adminStatus) {
-                            if(err) {
-                                // 500: internal server error
-                                logger.error("Failed trying to read if user is admin")
-                                res.status(500).send({ error: err })
-                            }
-                            else {
-                                logger.debug("is " + user + " admin? " + adminStatus + " | forumThreads owner: " + forum.ownerID)
-                                if (adminStatus === true || forum.ownerID === user) {
-                                    forumService.updateOne(forum, req.body, user, function (err, forum) {
-                                        if (forum) {
-                                            // 201: created
-                                            logger.info("Updated ForumThread: " + JSON.stringify(forum))
-                                            res.status(201).json(forum).send()
-                                        }
-                                        else {
-                                            // 500: internal server error
-                                            logger.error("Error while updating Forum: " + err)
-                                            res.status(500).send({ error: err })
-                                        }
-                                    })
+                        logger.debug("is " + user.userID + " admin? " + user.isAdministrator + " | forumThreads owner: " + forum.ownerID)
+                        if(user.isAdministrator === true || forum.ownerID === user.userID) {
+                            forumService.updateOne(forum, req.body, user, function (err, forum) {
+                                if(forum) {
+                                    // 201: created
+                                    logger.info("Updated ForumThread: " + JSON.stringify(forum))
+                                    res.status(201).json(forum).send()
                                 }
                                 else {
-                                    // 403: forbidden
-                                    logger.warn("Error: Not enough rights to modify")
-                                    res.status(403).json({ error: "Permission denied: Not enough rights" })
+                                    // 500: internal server error
+                                    logger.error("Error while updating Forum: " + err)
+                                    res.status(500).send({ error: err })
                                 }
-                            }
-                        })
+                            })
+                        }
+                        else {
+                            // 403: forbidden
+                            logger.warn("Error: Not enough rights to modify")
+                            res.status(403).json({ error: "Permission denied: Not enough rights" })
+                        }
                     }
                     else {
                         // 404: not found
@@ -185,40 +177,38 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
 router.delete('/:id', authenticationService.isAuthenticated, function(req, res, next){
     const { id } = req.params
     if(id) {
-        authenticationService.getUserFromToken(req, function (err, user) {
+        userService.getUserFromToken(req, function (err, user) {
             if(err) {
                 res.status(500).json({ error: "Could not get User" })
             }
             // only delete if user is owner or admin
-            userService.getIsAdmin(user, function (err, adminStatus) {
-                forumService.findForumByID(id, function(err, forum) {
-                    if(forum) {
-                        if(forum.ownerID === user || adminStatus) {
-                            forumService.deleteOne(forum, function(err, deleted) {
-                                if(err) {
-                                    // 500: internal server error
-                                    logger.error("Error while deleting ForumThread: " + err)
-                                    res.status(500).send({ error: err })
-                                }
-                                else {
-                                    // 200: OK
-                                    logger.info("Deleted ForumThread with id " + id)
-                                    res.status(200).send({ "Success": "Deleted ForumThread with id " + id })
-                                }
-                            })
-                        }
-                        else {
-                            // 403: forbidden
-                            logger.error("Not enough rights to delete forumThread: " + err)
-                            res.status(403).send({ error: err })
-                        }
+            forumService.findForumByID(id, function(err, forum) {
+                if(forum) {
+                    if(forum.ownerID === user.userID || user.isAdministrator) {
+                        forumService.deleteOne(forum, function(err, deleted) {
+                            if(err) {
+                                // 500: internal server error
+                                logger.error("Error while deleting ForumThread: " + err)
+                                res.status(500).send({ error: err })
+                            }
+                            else {
+                                // 200: OK
+                                logger.info("Deleted ForumThread with id " + id)
+                                res.status(200).send({ "Success": "Deleted ForumThread with id " + id })
+                            }
+                        })
                     }
                     else {
-                        // 404: not found
-                        logger.error("Deletion of forumThreads with id: " + id + " failed: Forum not found")
-                        res.status(404).send({ error: err })
+                        // 403: forbidden
+                        logger.error("Not enough rights to delete forumThread: " + err)
+                        res.status(403).send({ error: err })
                     }
-                })
+                }
+                else {
+                    // 404: not found
+                    logger.error("Deletion of forumThreads with id: " + id + " failed: Forum not found")
+                    res.status(404).send({ error: err })
+                }
             })
         })
     }

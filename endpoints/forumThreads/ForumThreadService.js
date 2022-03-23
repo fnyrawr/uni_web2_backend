@@ -75,28 +75,26 @@ function insertOne(forumProps, user, callback) {
     logger.debug("Trying to create a new forumThreads.")
     // set owner according to props only if requester is admin, otherwise owner is user
     var forumOwnerID = forumProps.ownerID
-    userService.getIsAdmin(user, (err, adminStatus) => {
-        if(!forumOwnerID || !adminStatus) {
-            logger.warn("no owner for the new forumThreads specified OR " + user + " is no admin: setting " + user + " as the owner of " + forumProps.forumName)
-            forumOwnerID = user
+    if(!forumOwnerID || !user.isAdministrator) {
+        logger.warn("no owner for the new forumThreads specified OR " + user.userID + " is no admin: setting " + user.userID + " as the owner of " + forumProps.forumName)
+        forumOwnerID = user.userID
+    }
+
+    var newForum = new ForumThread({
+        name: forumProps.name,
+        description: forumProps.description,
+        ownerID: forumOwnerID,
+        timestamp: new Date().toLocaleString()
+    })
+
+    newForum.save(function(err, newForum) {
+        if(err) {
+            logger.error("Could not create forumThreads: " + err)
+            return callback("Could not create forumThreads: " + err, null)
         }
-
-        var newForum = new ForumThread({
-            name: forumProps.name,
-            description: forumProps.description,
-            ownerID: forumOwnerID,
-            timestamp: new Date().toLocaleString()
-        })
-
-        newForum.save(function(err, newForum) {
-            if(err) {
-                logger.error("Could not create forumThreads: " + err)
-                return callback("Could not create forumThreads: " + err, null)
-            }
-            else {
-                return callback(null, newForum)
-            }
-        })
+        else {
+            return callback(null, newForum)
+        }
     })
 }
 
@@ -104,31 +102,29 @@ function updateOne(forum, forumProps, user, callback) {
     logger.debug("Trying to update forumThreads with forumName: " + forum.name)
     // set owner according to props only if requester is admin, otherwise owner is user
     var forumOwnerID = forumProps.ownerID
-    userService.getIsAdmin(user, (err, adminStatus) => {
-        if(!forumOwnerID || !adminStatus) {
-            logger.warn("no owner for the new forumThreads specified OR " + user + " is no admin: setting " + user + " as the owner of " + forumProps.name)
-            forumOwnerID = user
-        }
+    if(!forumOwnerID || !user.isAdministrator) {
+        logger.warn("no owner for the new forumThreads specified OR " + user.userID + " is no admin: setting " + user.userID + " as the owner of " + forumProps.name)
+        forumOwnerID = user.userID
+    }
 
-        if(forumProps.name) {
-            forum.name = forumProps.name
-        }
-        if(forumProps.description) {
-            forum.description = forumProps.description
-        }
-        if(forumProps.ownerID) {
-            forum.ownerID = forumOwnerID
-        }
+    if(forumProps.name) {
+        forum.name = forumProps.name
+    }
+    if(forumProps.description) {
+        forum.description = forumProps.description
+    }
+    if(forumProps.ownerID) {
+        forum.ownerID = forumOwnerID
+    }
 
-        forum.save(function(err, forum) {
-            if(err) {
-                logger.error("Could not update forumThreads: " + err)
-                return callback("Could not update forumThreads: " + err, null)
-            }
-            else {
-                return callback(null, forum)
-            }
-        })
+    forum.save(function(err, forum) {
+        if(err) {
+            logger.error("Could not update forumThreads: " + err)
+            return callback("Could not update forumThreads: " + err, null)
+        }
+        else {
+            return callback(null, forum)
+        }
     })
 }
 
