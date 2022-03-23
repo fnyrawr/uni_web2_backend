@@ -248,6 +248,36 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             })
     })
 
+    it("Trying to login as Scream McBeam to create new userToken (401 - unauthorized: need to verify after changes)", function(done) {
+        request(app)
+            .post('/authenticate')
+            .set('Authorization', 'Basic ' + Buffer.from("ghostface:br0oO").toString("base64"))
+            .end(function(err, res) {
+                expect(res.status).to.equal(401)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Re-Enabling (verifying) ghostface as admin that he can login", function(done) {
+        var modifiedGhostface = {
+            "isVerified": true
+        }
+        request(app)
+            .put('/users/ghostface')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(modifiedGhostface)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
     it("Logging in as Scream McBeam to create new userToken", function(done) {
         request(app)
             .post('/authenticate')
@@ -419,6 +449,177 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'content-type': 'application/json' })
             .end(function(err, res) {
                 expect(res.status).to.equal(400)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Changing email address - should work but user has to re-verify himself after changes", function(done) {
+        var modifiedManfred = {
+            "email": "manni@trash-me.com"
+        }
+        request(app)
+            .put('/users/manfred')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedManfred)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Try changing password - should throw 401 (unauthorized) due to pending re-verification", function(done) {
+        // recreate token for testing purposes
+        var issuedAt = new Date().getTime()
+        var expirationTime = config.get('verification.timeout')
+        var expiresAt = issuedAt + (expirationTime * 1000)
+        var privateKey = config.get('verification.tokenKey')
+        confirmationToken = Buffer.from(jwt.sign({ "email": "manni@trash-me.com" }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
+        var modifiedManfred = {
+            "email": "manni@trash-me.com"
+        }
+        request(app)
+            .put('/users/manfred')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedManfred)
+            .end(function(err, res) {
+                expect(res.status).to.equal(401)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Verify manfred with confirmationToken", function(done) {
+        var route = '/signup/confirm/' + confirmationToken
+        request(app)
+            .get(route)
+            .set({ 'content-type': 'application/json' })
+            .end(function(err, res) {
+                expect(res.status).to.equal(200)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Try changing password - should work now but will unverify user again due to changes", function(done) {
+        var modifiedManfred = {
+            "password": "qwertz"
+        }
+        request(app)
+            .put('/users/manfred')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedManfred)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Re-Verify manfred by admin", function(done) {
+        var modifiedManfred = {
+            "isVerified": true
+        }
+        request(app)
+            .put('/users/manfred')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(modifiedManfred)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Logging in as manfred to recheck if verified and to create a new token after changes", function(done) {
+        request(app)
+            .post('/authenticate')
+            .set('Authorization', 'Basic ' + Buffer.from("manfred:qwertz").toString("base64"))
+            .end(function(err, res) {
+                expect(200)
+                expect('content-type', 'application/json; charset=utf-8')
+                userToken = res.header.authorization
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Making manfred admin", function(done) {
+        var modifiedManfred = {
+            "isAdministrator": true
+        }
+        request(app)
+            .put('/users/manfred')
+            .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
+            .send(modifiedManfred)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Changing other admin account with manfred, who is also admin now", function(done) {
+        var modifiedAdmin = {
+            "userName": "Udo Mustermann"
+        }
+        request(app)
+            .put('/users/admin')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedAdmin)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+                expect(res.body.userName).to.equal("Udo Mustermann")
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Removing admin rights for manfred as himself", function(done) {
+        var modifiedManfred = {
+            "isAdministrator": false
+        }
+        request(app)
+            .put('/users/manfred')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedManfred)
+            .end(function(err, res) {
+                expect(res.status).to.equal(201)
+                expect('content-type', 'application/json; charset=utf-8')
+
+                if(err) done(err)
+                done()
+            })
+    })
+
+    it("Trying modify admin now (403 - forbidden)", function(done) {
+        var modifiedAdmin = {
+            "isAdministrator": false
+        }
+        request(app)
+            .put('/users/admin')
+            .set({ 'Authorization': userToken, 'content-type': 'application/json' })
+            .send(modifiedAdmin)
+            .end(function(err, res) {
+                expect(res.status).to.equal(403)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)

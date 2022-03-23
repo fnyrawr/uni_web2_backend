@@ -140,16 +140,20 @@ function insertOne(userProps, isAdmin, callback) {
     // only create if required data is given
     if(newUser.userID && newUser.userName && newUser.email && newUser.password) {
         // create confirmationToken
-        var issuedAt = new Date().getTime()
-        var expirationTime = config.get('verification.timeout')
-        var expiresAt = issuedAt + (expirationTime * 1000)
-        var privateKey = config.get('verification.tokenKey')
-        newUser.confirmationToken = Buffer.from(jwt.sign({ "email": newUser.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
+        if(!userProps.isVerified) {
+            // create confirmationToken
+            var issuedAt = new Date().getTime()
+            var expirationTime = config.get('verification.timeout')
+            var expiresAt = issuedAt + (expirationTime * 1000)
+            var privateKey = config.get('verification.tokenKey')
+            newUser.confirmationToken = Buffer.from(jwt.sign({ "email": newUser.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
+        }
         newUser.save(function (err, newUser) {
             if (err) {
                 logger.error("Could not create user: " + err)
                 return callback("Could not create user: " + err, null)
-            } else {
+            }
+            else {
                 // don't send a mail if verified by admin
                 if(!newUser.isVerified) {
                     Mail.sendConfirmationEmail(newUser.userName, newUser.email, newUser.confirmationToken)
@@ -166,6 +170,8 @@ function insertOne(userProps, isAdmin, callback) {
 
 function updateOne(user, userProps, isAdmin, callback) {
     logger.debug("Trying to update user with userID: " + user.userID)
+    var mailChange = false
+    var passChange = false
     if(userProps.userID) {
         user.userID = userProps.userID
     }
@@ -173,16 +179,37 @@ function updateOne(user, userProps, isAdmin, callback) {
         user.userName = userProps.userName
     }
     if(userProps.email) {
+        if(user.email !== userProps.email)
         user.email = userProps.email
+        mailChange = true
     }
+    // change password if it differs in hashes
     if(userProps.password) {
         user.password = userProps.password
+        passChange = true
     }
 
-    // only admin can verify users during update
+    // only admin can verify users during update or make them administrators
     if(isAdmin) {
         if(userProps.isVerified) {
             user.isVerified = userProps.isVerified
+        }
+        if(userProps.isAdministrator !== 'undefined') {
+            if(userProps.isAdministrator === true)
+                user.isAdministrator = true
+            else
+                user.isAdministrator = false
+        }
+    }
+    else {
+        // unverify user account if he changed email or password properties. user has to confirm changes by clicking the link in the sent email
+        if(mailChange || passChange) {
+            user.isVerified = false
+            var issuedAt = new Date().getTime()
+            var expirationTime = config.get('verification.timeout')
+            var expiresAt = issuedAt + (expirationTime * 1000)
+            var privateKey = config.get('verification.tokenKey')
+            user.confirmationToken = Buffer.from(jwt.sign({ "email": user.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
         }
     }
 
@@ -192,6 +219,10 @@ function updateOne(user, userProps, isAdmin, callback) {
             return callback("Could not update user: " + err, null)
         }
         else {
+            // send another confirmation mail on update of the user's mailaddress or password (if done by user himself and not by admin)
+            if(!newUser.isVerified) {
+                Mail.sendConfirmationEmail(newUser.userName, newUser.email, newUser.confirmationToken)
+            }
             return callback(null, newUser)
         }
     })
@@ -201,6 +232,7 @@ function verifyOne(user, token, callback) {
     // since issue date etc can vary during tests only take the first 128 characters for comparison which should be equal
     if(user.confirmationToken.substring(0,128) === token.substring(0,128)) {
         user.isVerified = true
+        user.confirmationToken = null
         user.save(function (err, verifiedUser) {
             if (err) {
                 logger.error("Could not update user: " + err)

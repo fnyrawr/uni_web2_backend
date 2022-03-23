@@ -95,8 +95,8 @@ router.put('/:userID', authenticationService.isAuthenticated, function(req, res,
                                             userService.updateOne(user, req.body, adminStatus, function (err, user) {
                                                 if (user) {
                                                     // 201: created
-                                                    const { id, userID, userName, email, ...partialObject } = user
-                                                    const subset = {id, userID, userName, email}
+                                                    const { id, userID, userName, email, isVerified, isAdministrator, ...partialObject } = user
+                                                    const subset = { id, userID, userName, email, isVerified, isAdministrator }
                                                     logger.info("Updated User: " + JSON.stringify(subset))
                                                     res.status(201).json(subset).send()
                                                 }

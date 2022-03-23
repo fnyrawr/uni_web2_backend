@@ -19,7 +19,7 @@ function createSessionToken(props, callback) {
             }
             user.comparePassword(props.password, function(err, isMatch) {
                 if(err) {
-                    logger.warn("Found user but password is invalid")
+                    logger.warn("Error: " + err)
                     callback(err, null, null)
                 }
                 else {

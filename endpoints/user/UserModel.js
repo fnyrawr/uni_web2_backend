@@ -12,17 +12,8 @@ const UserSchema = new mongoose.Schema({
     confirmationToken: String
 }, { timestamps: true })
 
-UserSchema.methods.whoAmI = function () {
-    var output = this.userID
-        ? "My name is " + this.username
-        : "I don't have a name";
-    logger.info(output)
-}
-
 UserSchema.pre('save', function (next) {
     var user = this
-
-    logger.debug("Pre-save " + this.password + " change: " + this.isModified('password'))
 
     if(!user.isModified('password')) { return next() }
     bcrypt.hash(user.password, 10).then((hashedPassword) => {
@@ -35,8 +26,9 @@ UserSchema.pre('save', function (next) {
 
 UserSchema.methods.comparePassword = function (candidatePassword, next) {
     bcrypt.compare(candidatePassword, this.password, function (err, isMatch) {
-        if(err)
-            return next(err)
+        if(err) {
+            return next(err, null)
+        }
         else
             next(null, isMatch)
     })
