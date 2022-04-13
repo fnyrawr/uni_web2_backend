@@ -32,7 +32,7 @@ const authenticationRoutes = require('./endpoints/authentication/AuthenticationR
 const signupRoutes = require('./endpoints/signup/SignupRoute')
 
 /* Adding Routes */
-app.use('/publicUser', publicUserRoutes)
+app.use('/publicUsers', publicUserRoutes)
 app.use('/users', userRoutes)
 app.use('/forumThreads', forumRoutes)
 app.use('/forumMessages', forumMessageRoutes)
