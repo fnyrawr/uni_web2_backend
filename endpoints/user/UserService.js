@@ -38,7 +38,6 @@ function findUserBy(searchUserID, callback) {
                     callback(null, user)
                 }
                 else {
-                    /*
                     // creating admin account if didn't exist yet
                     if ('admin' === searchUserID) {
                         logger.info('There is no admin account yet, creating now with defaults')
@@ -61,11 +60,10 @@ function findUserBy(searchUserID, callback) {
                             }
                         })
                     }
-                    */
-                    // else {
+                    else {
                         logger.debug("Could not find User for userID: " + searchUserID)
                         callback("UserID " + searchUserID + " not found", null)
-                    // }
+                    }
                 }
             }
         })
@@ -139,8 +137,8 @@ function insertOne(userProps, isAdmin, callback) {
         }
     }
 
-    // only create if required data is given | re-add newUser.email check later
-    if(newUser.userID && newUser.userName &&  newUser.password) {
+    // only create if required data is given
+    if(newUser.userID && newUser.userName && newUser.email && newUser.password) {
         // create confirmationToken
         if(!userProps.isVerified) {
             // create confirmationToken

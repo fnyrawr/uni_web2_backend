@@ -5,7 +5,7 @@ const expect = require('chai').expect
 describe("[PREP] Cleaning up Database - removing previous users", function() {
     it("Status Code depends if DB got populated before the test, so no checks here", function(done) {
         request(app)
-            .delete('/publicUsers/deleteAllUsers')
+            .delete('/publicUser/deleteAllUsers')
             .end(function (err, res) {
                 expect(200)
                 if(err) done(err)
@@ -17,7 +17,7 @@ describe("[PREP] Cleaning up Database - removing previous users", function() {
 describe("[TEST] Checking if DB is empty", function() {
     it("No users should be returned", function(done) {
         request(app)
-            .get('/publicUsers')
+            .get('/publicUser')
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -41,7 +41,7 @@ describe("[TEST] Tests with admin user", function() {
             "isAdministrator": true
         }
         request(app)
-            .post('/publicUsers')
+            .post('/publicUser')
             .set('content-type', 'application/json')
             .send(adminUser)
             .end(function(err, res) {
@@ -54,7 +54,7 @@ describe("[TEST] Tests with admin user", function() {
 
     it("Checking if admin user was added to the database", function(done) {
         request(app)
-            .get('/publicUsers/admin')
+            .get('/publicUser/admin')
             .end(function(err, res) {
                 hashedPW = res.body.password
                 expect(200)
@@ -78,7 +78,7 @@ describe("[TEST] Tests with admin user", function() {
             "password": "12345"
         }
         request(app)
-            .put('/publicUsers/admin')
+            .put('/publicUser/admin')
             .set('content-type', 'application/json')
             .send(adminUser)
             .end(function(err, res) {
@@ -104,7 +104,7 @@ describe("[TEST] Tests with user manfred", function() {
             "isVerified": "true"
         }
         request(app)
-            .post('/publicUsers/')
+            .post('/publicUser/')
             .set('content-type', 'application/json')
             .send(manfred)
             .end(function(err, res) {
@@ -126,7 +126,7 @@ describe("[TEST] Tests with user manfred", function() {
             "userName": "Manfred Müller"
         }
         request(app)
-            .put('/publicUsers/manfred')
+            .put('/publicUser/manfred')
             .set('content-type', 'application/json')
             .send(manfred)
             .end(function(err, res) {
@@ -143,7 +143,7 @@ describe("[TEST] Tests with user manfred", function() {
 
     it("User count should be 2", function(done) {
         request(app)
-            .get('/publicUsers')
+            .get('/publicUser')
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
@@ -164,7 +164,7 @@ describe("[TEST] Error handling tests", function() {
             "isVerified": "true"
         }
         request(app)
-            .post('/publicUsers/')
+            .post('/publicUser/')
             .set('content-type', 'application/json')
             .send(freddy)
             .end(function(err, res) {
@@ -181,7 +181,7 @@ describe("[TEST] Error handling tests", function() {
             "password": "ghosted"
         }
         request(app)
-            .post('/publicUsers/')
+            .post('/publicUser/')
             .set('content-type', 'application/json')
             .send(ghost)
             .end(function(err, res) {
@@ -199,7 +199,7 @@ describe("[TEST] Error handling tests", function() {
             "password": "ghosted"
         }
         request(app)
-            .put('/publicUsers/ghostface')
+            .put('/publicUser/ghostface')
             .set('content-type', 'application/json')
             .send(ghost)
             .end(function(err, res) {
@@ -212,7 +212,7 @@ describe("[TEST] Error handling tests", function() {
 
     it("Try to delete a user who doesn't exist: expect 404 (not found)", function(done) {
         request(app)
-            .delete('/publicUsers/ghostfacekiller')
+            .delete('/publicUser/ghostfacekiller')
             .end(function(err, res) {
                 expect(404)
 
@@ -225,7 +225,7 @@ describe("[TEST] Error handling tests", function() {
 describe("[CLEANUP] Cleanup operations", function() {
     it("Removing freddy from database", function(done) {
         request(app)
-            .delete('/publicUsers/freddy')
+            .delete('/publicUser/freddy')
             .end(function(err, res) {
                 expect(200)
 
@@ -236,7 +236,7 @@ describe("[CLEANUP] Cleanup operations", function() {
 
     it("Removing admin from database", function(done) {
         request(app)
-            .delete('/publicUsers/admin')
+            .delete('/publicUser/admin')
             .end(function(err, res) {
                 expect(200)
 
@@ -247,7 +247,7 @@ describe("[CLEANUP] Cleanup operations", function() {
 
     it("User count should be 0", function(done) {
         request(app)
-            .get('/publicUsers')
+            .get('/publicUser')
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')

@@ -83,7 +83,6 @@ function insertOne(forumProps, user, callback) {
     var newForum = new ForumThread({
         name: forumProps.name,
         description: forumProps.description,
-        pictureURL: forumProps.pictureURL,
         ownerID: forumOwnerID,
         timestamp: new Date().toLocaleString()
     })
@@ -116,9 +115,6 @@ function updateOne(forum, forumProps, user, callback) {
     }
     if(forumProps.ownerID) {
         forum.ownerID = forumOwnerID
-    }
-    if(forumProps.pictureURL) {
-        forum.pictureURL = forumProps.pictureURL
     }
 
     forum.save(function(err, forum) {

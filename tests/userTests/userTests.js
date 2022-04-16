@@ -657,7 +657,7 @@ describe("[CLEANUP] Cleaning up database", function() {
 
     it("Recheck: User count should be 0 by now", function(done) {
         request(app)
-            .get('/publicUsers')
+            .get('/publicUser')
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')

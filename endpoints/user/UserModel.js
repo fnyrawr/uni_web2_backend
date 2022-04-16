@@ -5,7 +5,7 @@ var logger = require('../../config/winston')
 const UserSchema = new mongoose.Schema({
     userID: { type: String, unique: true },
     userName: String,
-    email: { type: String }, // re-add unique: true after milestone 1
+    email: { type: String, unique: true },
     password: String,
     isAdministrator: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },

@@ -9,8 +9,7 @@ const userService = require("../user/UserService")
 
 // get messages for forumThreadID
 router.get('/:id/forumMessages', function (req, res, next) {
-    const { id } = req.params
-    forumMessageService.getForumMessages({ forumThreadID: id },function (err, result) {
+    forumMessageService.getForumMessages({},function (err, result) {
         if(err) {
             // 500: internal server error
             logger.error(err)
