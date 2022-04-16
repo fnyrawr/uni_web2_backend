@@ -3,7 +3,6 @@ var mongoose = require('mongoose')
 const ForumThreadSchema = new mongoose.Schema({
         name: { type: String, unique: true },
         description: String,
-        pictureURL: String,
         ownerID: String,
         timestamp: String
     }
