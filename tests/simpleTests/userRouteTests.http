@@ -1,14 +1,14 @@
 ###
 // delete all previous
-DELETE http://localhost:8080/publicUser/deleteAllUsers
+DELETE http://localhost:8080/publicUsers/deleteAllUsers
 
 ###
 // no users should be in the database here
-http://localhost:8080/publicUser/
+http://localhost:8080/publicUsers/
 
 ###
 // creating first user who is admin | throws 409 (conflict) because admin is created by default
-POST http://localhost:8080/publicUser/
+POST http://localhost:8080/publicUsers/
 Content-Type: application/json
 
 {
@@ -20,11 +20,11 @@ Content-Type: application/json
 
 ###
 // find admin in database
-GET http://localhost:8080/publicUser/admin
+GET http://localhost:8080/publicUsers/admin
 
 ###
 // creating second user who is not admin
-POST http://localhost:8080/publicUser/
+POST http://localhost:8080/publicUsers/
 Content-Type: application/json
 
 {
@@ -36,7 +36,7 @@ Content-Type: application/json
 
 ###
 // find manfred in database
-POST http://localhost:8080/publicUser/getUserByID
+POST http://localhost:8080/publicUsers/getUserByID
 Content-Type: application/json
 
 {
@@ -45,7 +45,7 @@ Content-Type: application/json
 
 ###
 // update manfred
-PUT http://localhost:8080/publicUser/manfred
+PUT http://localhost:8080/publicUsers/manfred
 Content-Type: application/json
 
 {
@@ -55,11 +55,11 @@ Content-Type: application/json
 
 ###
 // 2 users should be in the database now
-http://localhost:8080/publicUser/
+http://localhost:8080/publicUsers/
 
 ###
 // try creating user without userID - expect 400 (bad request)
-POST http://localhost:8080/publicUser/
+POST http://localhost:8080/publicUsers/
 Content-Type: application/json
 
 {
@@ -70,7 +70,7 @@ Content-Type: application/json
 
 ###
 // try updating user who doesn't exist - expect 404 (not found)
-PUT http://localhost:8080/publicUser/manni
+PUT http://localhost:8080/publicUsers/manni
 Content-Type: application/json
 
 {
@@ -81,7 +81,7 @@ Content-Type: application/json
 }
 
 ###
-POST http://localhost:8080/publicUser/deleteUserByID
+POST http://localhost:8080/publicUsers/deleteUserByID
 Content-Type: application/json
 
 {
@@ -89,7 +89,7 @@ Content-Type: application/json
 }
 
 ###
-DELETE http://localhost:8080/publicUser/manfred
+DELETE http://localhost:8080/publicUsers/manfred
 Content-Type: application/json
 
 {
