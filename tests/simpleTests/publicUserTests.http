@@ -1,3 +1,7 @@
+###
+// delete all previous
+DELETE http://localhost:8080/publicUsers/deleteAllUsers
+
 // Rufe alle User ab. Zu Beginn sollten keine User in der Datenbank sein.
 ###
 GET http://localhost:8080/publicUsers
@@ -41,6 +45,29 @@ Content-Type: application/json
 }
 
 ###
+// Probiere User mit bereits vorhandener userID anzulegen
+###
+POST http://localhost:8080/publicUsers
+Content-Type: application/json
+
+{
+  "userID": "manfred",
+  "userName": "Manfred Mayer",
+  "password": "asdf"
+}
+
+###
+// Probiere User ohne userID anzulegen
+###
+POST http://localhost:8080/publicUsers
+Content-Type: application/json
+
+{
+  "userName": "Manfred Maier",
+  "password": "asdf"
+}
+
+###
 // Rufe alle User ab. Es sollten 2 User zurückgegeben werden.
 ###
 GET http://localhost:8080/publicUsers
@@ -48,3 +75,13 @@ GET http://localhost:8080/publicUsers
 // Lösche den User mit der User-ID manfred
 ###
 DELETE  http://localhost:8080/publicUsers/manfred
+
+###
+// Probiere User zu ändern der nicht (mehr) existiert.
+###
+PUT http://localhost:8080/publicUsers/manfred
+Content-Type: application/json
+
+{
+  "userName": "Manfred Müller"
+}

@@ -1,5 +1,5 @@
 const request = require('supertest')
-const app = require('../../httpServer')
+const app = require('../../HttpServer')
 const config = require("config");
 const jwt = require("jsonwebtoken");
 const expect = require('chai').expect

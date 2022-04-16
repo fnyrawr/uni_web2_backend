@@ -1,4 +1,4 @@
-const server = require('../httpServer')
+const server = require('../HttpServer')
 const db = require('../database/db')
 var logger = require('../config/winston')
 

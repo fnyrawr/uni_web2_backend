@@ -38,32 +38,8 @@ function findUserBy(searchUserID, callback) {
                     callback(null, user)
                 }
                 else {
-                    // creating admin account if didn't exist yet
-                    if ('admin' === searchUserID) {
-                        logger.info('There is no admin account yet, creating now with defaults')
-                        var adminUser = new User();
-                        adminUser.userID = "admin"
-                        adminUser.password = "123"
-                        adminUser.userName = "Default Administrator Account"
-                        adminUser.isAdministrator = true
-                        adminUser.isVerified = true
-                        adminUser.email = "admin@existiert.net"
-                        adminUser.confirmationToken = null
-
-                        adminUser.save(function(err) {
-                            if(err) {
-                                logger.error("Could not create default admin account: " + err)
-                                callback("Could not create default admin account", null)
-                            }
-                            else {
-                                callback(null, adminUser)
-                            }
-                        })
-                    }
-                    else {
-                        logger.debug("Could not find User for userID: " + searchUserID)
-                        callback("UserID " + searchUserID + " not found", null)
-                    }
+                    logger.debug("Could not find User for userID: " + searchUserID)
+                    callback("UserID " + searchUserID + " not found", null)
                 }
             }
         })
@@ -120,25 +96,18 @@ function getIsAdmin(searchUserID, callback) {
 function insertOne(userProps, isAdmin, callback) {
     logger.debug("Trying to create a new user.")
 
+    // always set isVerified to true in milestone 1 for making moodle tests work
     var newUser = new User({
         userID: userProps.userID,
         userName: userProps.userName,
         email: userProps.email,
-        password: userProps.password
+        password: userProps.password,
+        isAdministrator: userProps.isAdministrator,
+        isVerified: true
     })
 
-    // only admin can verify users during creation
-    if(isAdmin) {
-        if(userProps.isVerified) {
-            newUser.isVerified = userProps.isVerified
-        }
-        if(userProps.isAdministrator) {
-            newUser.isAdministrator = userProps.isAdministrator
-        }
-    }
-
     // only create if required data is given
-    if(newUser.userID && newUser.userName && newUser.email && newUser.password) {
+    if(newUser.userID && newUser.userName && newUser.password) {
         // create confirmationToken
         if(!userProps.isVerified) {
             // create confirmationToken
@@ -154,10 +123,6 @@ function insertOne(userProps, isAdmin, callback) {
                 return callback("Could not create user: " + err, null)
             }
             else {
-                // don't send a mail if verified by admin
-                if(!newUser.isVerified) {
-                    Mail.sendConfirmationEmail(newUser.userName, newUser.email, newUser.confirmationToken)
-                }
                 return callback(null, newUser)
             }
         })
@@ -189,7 +154,7 @@ function updateOne(user, userProps, isAdmin, callback) {
         passChange = true
     }
 
-    // only admin can verify users during update or make them administrators
+    // only admin verify users during update or make them administrators
     if(isAdmin) {
         if(userProps.isVerified) {
             user.isVerified = userProps.isVerified
@@ -199,17 +164,6 @@ function updateOne(user, userProps, isAdmin, callback) {
                 user.isAdministrator = true
             else
                 user.isAdministrator = false
-        }
-    }
-    else {
-        // unverify user account if he changed email or password properties. user has to confirm changes by clicking the link in the sent email
-        if(mailChange || passChange) {
-            user.isVerified = false
-            var issuedAt = new Date().getTime()
-            var expirationTime = config.get('verification.timeout')
-            var expiresAt = issuedAt + (expirationTime * 1000)
-            var privateKey = config.get('verification.tokenKey')
-            user.confirmationToken = Buffer.from(jwt.sign({ "email": user.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
         }
     }
 

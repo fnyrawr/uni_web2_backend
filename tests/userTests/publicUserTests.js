@@ -1,5 +1,5 @@
 const request = require('supertest')
-const app = require('../../httpServer')
+const app = require('../../HttpServer')
 const expect = require('chai').expect
 
 describe("[PREP] Cleaning up Database - removing previous users", function() {
