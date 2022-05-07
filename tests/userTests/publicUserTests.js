@@ -1,5 +1,5 @@
 const request = require('supertest')
-const app = require('../../httpServer')
+const app = require('../../HttpServer')
 const expect = require('chai').expect
 
 describe("[PREP] Cleaning up Database - removing previous users", function() {
@@ -14,15 +14,14 @@ describe("[PREP] Cleaning up Database - removing previous users", function() {
     })
 })
 
-describe("[TEST] Checking if DB is empty", function() {
+describe("[TEST] Checking if only admin exists", function() {
     it("No users should be returned", function(done) {
         request(app)
             .get('/publicUsers')
             .end(function(err, res) {
                 expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
-                expect([])
-                expect(Object.keys(res.body).length).to.equal(0)
+                expect(Object.keys(res.body).length).to.equal(1)
                 if(err) done(err)
                 done()
             })
@@ -82,7 +81,7 @@ describe("[TEST] Tests with admin user", function() {
             .set('content-type', 'application/json')
             .send(adminUser)
             .end(function(err, res) {
-                expect(201)
+                expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.userID).to.equal("admin")
                 expect(res.body.userName).to.equal("Udo Müller")
@@ -130,7 +129,7 @@ describe("[TEST] Tests with user manfred", function() {
             .set('content-type', 'application/json')
             .send(manfred)
             .end(function(err, res) {
-                expect(201)
+                expect(200)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.userID).to.equal("freddy")
                 expect(res.body.userName).to.equal("Manfred Müller")

@@ -1,5 +1,5 @@
 const request = require('supertest')
-const app = require('../../httpServer')
+const app = require('../../HttpServer')
 const config = require("config");
 const jwt = require("jsonwebtoken");
 const expect = require('chai').expect
@@ -9,7 +9,7 @@ var userToken = ""
 describe("[PREP] creating users and generating their tokens for forumThreads tests", function() {
     it("Creating token for admin", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("admin:123").toString("base64"))
             .end(function(err, res) {
                 expect(200)
@@ -47,7 +47,7 @@ describe("[PREP] creating users and generating their tokens for forumThreads tes
 
     it("Creating token for manfred", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("manfred:asdf").toString("base64"))
             .end(function(err, res) {
                 expect(200)
@@ -156,7 +156,7 @@ describe("[TEST] Testing forumThreads functionalities", function() {
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(adminForum)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.ownerID).to.equal("manfred")
 
@@ -176,7 +176,7 @@ describe("[TEST] Testing forumThreads functionalities", function() {
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(adminForum)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.ownerID).to.equal("manfred")
 
@@ -333,7 +333,7 @@ describe("[TEST] Testing forumMessage functionalities", function() {
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(message)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
 
                 if(err) done(err)
                 done()
@@ -351,7 +351,7 @@ describe("[TEST] Testing forumMessage functionalities", function() {
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(message)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
 
                 if(err) done(err)
                 done()
@@ -631,7 +631,7 @@ describe("[TEST] Testing comment functionalities", function() {
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(message)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
 
                 if(err) done(err)
                 done()

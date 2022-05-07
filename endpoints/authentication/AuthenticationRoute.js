@@ -4,7 +4,7 @@ var logger = require('../../config/winston')
 
 var authenticationService = require('./AuthenticationService')
 
-router.post('/', function(req, res, next) {
+router.get('/', function(req, res, next) {
     // check for basic auth header
     if (!req.headers.authorization || req.headers.authorization.indexOf('Basic ') === -1) {
         // 401: unauthorized

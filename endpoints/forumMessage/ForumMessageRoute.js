@@ -132,9 +132,9 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
                         if (user.isAdministrator === true || message.authorID === user.userID) {
                             forumMessageService.updateOne(message, updatedMessage, user, function (err, message) {
                                 if (message) {
-                                    // 201: created
+                                    // 200: OK
                                     logger.info("Updated Message: " + JSON.stringify(message))
-                                    res.status(201).json(message).send()
+                                    res.status(200).json(message).send()
                                 }
                                 else {
                                     // 500: internal server error

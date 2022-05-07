@@ -1,6 +1,7 @@
 var client = require('mongoose')
 const config = require('config')
 var logger = require('../config/winston')
+const userService = require('../endpoints/user/UserService')
 
 let _db
 
@@ -14,7 +15,17 @@ function initDb(callback) {
             return callback(err)
         }
         logger.debug("DB initialized - connected to: " + config.db.connectionString.split("@")[1]);
-        _db = db;
+        _db = db
+
+        // creating default admin if not exists
+        userService.findUserBy('admin', function(err, admin) {
+            if(err) {
+                logger.error("Error while trying to create default admin user")
+            }
+            else {
+                logger.info("Admin user exists now, DB init complete")
+            }
+        })
         return callback(null, _db)
     }
 }

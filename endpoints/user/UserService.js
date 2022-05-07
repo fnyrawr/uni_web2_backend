@@ -19,6 +19,28 @@ function getUsers(callback) {
     })
 }
 
+function createAdmin(callback) {
+    logger.info('Creating default admin')
+    var adminUser = new User();
+    adminUser.userID = "admin"
+    adminUser.password = "123"
+    adminUser.userName = "Default Administrator Account"
+    adminUser.isAdministrator = true
+    adminUser.isVerified = true
+    adminUser.email = "admin@existiert.net"
+    adminUser.confirmationToken = null
+
+    adminUser.save(function(err) {
+        if(err) {
+            logger.error("Could not create default admin account: " + err)
+            callback("Could not create default admin account", null)
+        }
+        else {
+            callback(null, adminUser)
+        }
+    })
+}
+
 function findUserBy(searchUserID, callback) {
     logger.debug("Trying to find userID " + searchUserID)
 
@@ -40,20 +62,9 @@ function findUserBy(searchUserID, callback) {
                 else {
                     // creating admin account if didn't exist yet
                     if ('admin' === searchUserID) {
-                        logger.info('There is no admin account yet, creating now with defaults')
-                        var adminUser = new User();
-                        adminUser.userID = "admin"
-                        adminUser.password = "123"
-                        adminUser.userName = "Default Administrator Account"
-                        adminUser.isAdministrator = true
-                        adminUser.isVerified = true
-                        adminUser.email = "admin@existiert.net"
-                        adminUser.confirmationToken = null
-
-                        adminUser.save(function(err) {
+                        createAdmin(function(err, adminUser) {
                             if(err) {
-                                logger.error("Could not create default admin account: " + err)
-                                callback("Could not create default admin account", null)
+                                callback("Error while creating default admin", null)
                             }
                             else {
                                 callback(null, adminUser)

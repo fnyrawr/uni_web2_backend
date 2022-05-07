@@ -136,9 +136,9 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
                         if(user.isAdministrator === true || forum.ownerID === user.userID) {
                             forumService.updateOne(forum, req.body, user, function (err, forum) {
                                 if(forum) {
-                                    // 201: created
+                                    // 200: OK
                                     logger.info("Updated ForumThread: " + JSON.stringify(forum))
-                                    res.status(201).json(forum).send()
+                                    res.status(200).json(forum).send()
                                 }
                                 else {
                                     // 500: internal server error

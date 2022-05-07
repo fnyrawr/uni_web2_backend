@@ -1,5 +1,5 @@
 const request = require('supertest')
-const app = require('../../httpServer')
+const app = require('../../HttpServer')
 const config = require("config");
 const jwt = require("jsonwebtoken");
 const expect = require('chai').expect
@@ -9,7 +9,7 @@ var userToken = ""
 describe("[TEST] /authenticate - testing login with Basic authentication", function() {
     it("Trying to create a token using correct credentials to create adminToken", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("admin:123").toString("base64"))
             .end(function(err, res) {
                 expect(200)
@@ -23,7 +23,7 @@ describe("[TEST] /authenticate - testing login with Basic authentication", funct
 
     it("Trying to use wrong credentials: expecting a 401 status code (unauthorized) here", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("admin:1234").toString("base64"))
             .end(function(err, res) {
                 expect(401)
@@ -125,7 +125,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
 
     it("Logging in as Stefan Stecher to create userToken", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("killah247:h4cKm3n0oB").toString("base64"))
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
@@ -220,7 +220,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(modifiedKillah247)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -250,7 +250,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
 
     it("Trying to login as Scream McBeam to create new userToken (401 - unauthorized: need to verify after changes)", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("ghostface:br0oO").toString("base64"))
             .end(function(err, res) {
                 expect(res.status).to.equal(401)
@@ -270,7 +270,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(modifiedGhostface)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -280,7 +280,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
 
     it("Logging in as Scream McBeam to create new userToken", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("ghostface:br0oO").toString("base64"))
             .end(function(err, res) {
                 expect(res.status).to.equal(200)
@@ -352,7 +352,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(modifiedBigsmoke)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.userID).to.equal("ryder")
                 expect(res.body.userName).to.equal("Ryder")
@@ -404,7 +404,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
 
     it("Try to create a token for manfred (not verified yet) - expecting 403 status code (error) here", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("manfred:asdf").toString("base64"))
             .end(function(err, res) {
                 expect(403)
@@ -431,7 +431,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
 
     it("Creating token for manfred", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("manfred:asdf").toString("base64"))
             .end(function(err, res) {
                 expect(200)
@@ -465,7 +465,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(modifiedManfred)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -519,7 +519,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(modifiedManfred)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -536,7 +536,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(modifiedManfred)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -546,7 +546,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
 
     it("Logging in as manfred to recheck if verified and to create a new token after changes", function(done) {
         request(app)
-            .post('/authenticate')
+            .get('/authenticate')
             .set('Authorization', 'Basic ' + Buffer.from("manfred:qwertz").toString("base64"))
             .end(function(err, res) {
                 expect(200)
@@ -567,7 +567,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': adminToken, 'content-type': 'application/json' })
             .send(modifiedManfred)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)
@@ -584,7 +584,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(modifiedAdmin)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
                 expect(res.body.userName).to.equal("Udo Mustermann")
 
@@ -602,7 +602,7 @@ describe("[TEST] /users - testing the users endpoint (should only work if author
             .set({ 'Authorization': userToken, 'content-type': 'application/json' })
             .send(modifiedManfred)
             .end(function(err, res) {
-                expect(res.status).to.equal(201)
+                expect(res.status).to.equal(200)
                 expect('content-type', 'application/json; charset=utf-8')
 
                 if(err) done(err)

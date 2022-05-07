@@ -85,7 +85,7 @@ router.put('/:userID', function(req, res, next) {
                     if (result) {
                         // 200: OK
                         logger.info("User updated - " + result)
-                        res.status(201).json(result).send()
+                        res.status(200).json(result).send()
                     } else {
                         // 403: forbidden
                         logger.error("Error while updating User: " + err)

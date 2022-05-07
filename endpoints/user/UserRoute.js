@@ -42,7 +42,8 @@ router.post('/', authenticationService.isAdministrator, function(req, res, next)
                         const subset = { id, userID, userName, email }
                         logger.debug("Created user: " + JSON.stringify(subset))
                         res.status(201).json(subset).send()
-                    } else {
+                    }
+                    else {
                         // 500: internal server error
                         logger.error("Error while creating user: " + err)
                         res.status(500).send({ error: err })
@@ -79,11 +80,11 @@ router.put('/:userID', authenticationService.isAuthenticated, function(req, res,
                         if (requestingUser.isAdministrator || requestingUser.userID === user.userID) {
                             userService.updateOne(user, req.body, requestingUser.isAdministrator, function (err, user) {
                                 if (user) {
-                                    // 201: created
+                                    // 200: OK
                                     const { id, userID, userName, email, isVerified, isAdministrator, ...partialObject } = user
                                     const subset = { id, userID, userName, email, isVerified, isAdministrator }
                                     logger.info("Updated User: " + JSON.stringify(subset))
-                                    res.status(201).json(subset).send()
+                                    res.status(200).json(subset).send()
                                 }
                                 else {
                                     // 500: internal server error

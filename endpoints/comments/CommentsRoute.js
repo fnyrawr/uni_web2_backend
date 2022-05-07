@@ -103,9 +103,9 @@ router.put('/:id', authenticationService.isAuthenticated, function(req, res, nex
                         if(user.isAdministrator === true || comment.authorID === user.userID) {
                             commentService.updateOne(comment, updatedComment, user, function (err, comment) {
                                 if(comment) {
-                                    // 201: created
+                                    // 200: OK
                                     logger.info("Updated Comment: " + JSON.stringify(comment))
-                                    res.status(201).json(comment).send()
+                                    res.status(200).json(comment).send()
                                 }
                                 else {
                                     // 500: internal server error
