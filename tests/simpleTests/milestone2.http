@@ -21,11 +21,11 @@ http://localhost:8080/users
 
 ### Auflisten aller Nutzer mit Token von admin
 http://localhost:8080/users
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJhZG1pbiIsInVzZXJOYW1lIjoiRGVmYXVsdCBBZG1pbmlzdHJhdG9yIEFjY291bnQiLCJpc0FkbWluaXN0cmF0b3IiOnRydWUsImlhdCI6MTY1MTk0NDk3MywiZXhwIjoxNjUzNTk3MjE4MDMwfQ.Pw4JbXUhJqOiH8PEoiukGwFYsNBtMoU3o1jhZuEh3D4
+Authorization: {{adminToken}}
 
 ### Lege neuen user manfred an
 POST http://localhost:8080/users
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJhZG1pbiIsInVzZXJOYW1lIjoiRGVmYXVsdCBBZG1pbmlzdHJhdG9yIEFjY291bnQiLCJpc0FkbWluaXN0cmF0b3IiOnRydWUsImlhdCI6MTY1MTk0NDk3MywiZXhwIjoxNjUzNTk3MjE4MDMwfQ.Pw4JbXUhJqOiH8PEoiukGwFYsNBtMoU3o1jhZuEh3D4
+Authorization: {{adminToken}}
 Content-Type: application/json
 
 {
@@ -36,7 +36,7 @@ Content-Type: application/json
 
 ### Abrufen des angelegten Users mit dem Admin-Token
 GET http://localhost:8080/users/manfred
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJhZG1pbiIsInVzZXJOYW1lIjoiRGVmYXVsdCBBZG1pbmlzdHJhdG9yIEFjY291bnQiLCJpc0FkbWluaXN0cmF0b3IiOnRydWUsImlhdCI6MTY1MTk0NDk3MywiZXhwIjoxNjUzNTk3MjE4MDMwfQ.Pw4JbXUhJqOiH8PEoiukGwFYsNBtMoU3o1jhZuEh3D4
+Authorization: {{adminToken}}
 
 // Login mit Basic Authentication als manfred mit korrekten Credentials admin:123
 ###
@@ -57,7 +57,7 @@ GET http://localhost:8080/forumThreads
 ###
 # @name createForumRequest
 POST http://localhost:8080/forumThreads
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJhZG1pbiIsInVzZXJOYW1lIjoiRGVmYXVsdCBBZG1pbmlzdHJhdG9yIEFjY291bnQiLCJpc0FkbWluaXN0cmF0b3IiOnRydWUsImlhdCI6MTY1MTk0NDk3MywiZXhwIjoxNjUzNTk3MjE4MDMwfQ.Pw4JbXUhJqOiH8PEoiukGwFYsNBtMoU3o1jhZuEh3D4
+Authorization: {{adminToken}}
 Content-Type: application/json
 
 {
@@ -86,7 +86,7 @@ Content-Type: application/json
 
 ### Auflisten der Foren des aktuellen users
 GET http://localhost:8080/forumThreads/myForumThreads
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJhZG1pbiIsInVzZXJOYW1lIjoiRGVmYXVsdCBBZG1pbmlzdHJhdG9yIEFjY291bnQiLCJpc0FkbWluaXN0cmF0b3IiOnRydWUsImlhdCI6MTY1MTk0NDk3MywiZXhwIjoxNjUzNTk3MjE4MDMwfQ.Pw4JbXUhJqOiH8PEoiukGwFYsNBtMoU3o1jhZuEh3D4
+Authorization: {{adminToken}}
 
 ### Auflisten der Foren einen bestimmten user
 GET http://localhost:8080/forumThreads?ownerID=manfred
@@ -94,8 +94,8 @@ GET http://localhost:8080/forumThreads?ownerID=manfred
 
 ### Lösche den angelegten Forum-Thread
 DELETE http://localhost:8080/forumThreads/{{forumThreadID}}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJhZG1pbiIsInVzZXJOYW1lIjoiRGVmYXVsdCBBZG1pbmlzdHJhdG9yIEFjY291bnQiLCJpc0FkbWluaXN0cmF0b3IiOnRydWUsImlhdCI6MTY1MTk0NDk3MywiZXhwIjoxNjUzNTk3MjE4MDMwfQ.Pw4JbXUhJqOiH8PEoiukGwFYsNBtMoU3o1jhZuEh3D4
+Authorization: {{adminToken}}
 
 ### Lösche den User manfred
 DELETE http://localhost:8080/users/manfred
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJhZG1pbiIsInVzZXJOYW1lIjoiRGVmYXVsdCBBZG1pbmlzdHJhdG9yIEFjY291bnQiLCJpc0FkbWluaXN0cmF0b3IiOnRydWUsImlhdCI6MTY1MTk0NDk3MywiZXhwIjoxNjUzNTk3MjE4MDMwfQ.Pw4JbXUhJqOiH8PEoiukGwFYsNBtMoU3o1jhZuEh3D4
+Authorization: {{adminToken}}

@@ -140,35 +140,19 @@ function insertOne(userProps, isAdmin, callback) {
 
     // only admin can verify users during creation
     if(isAdmin) {
-        if(userProps.isVerified) {
-            newUser.isVerified = userProps.isVerified
-        }
         if(userProps.isAdministrator) {
             newUser.isAdministrator = userProps.isAdministrator
         }
     }
 
     // only create if required data is given
-    if(newUser.userID && newUser.userName && newUser.email && newUser.password) {
-        // create confirmationToken
-        if(!userProps.isVerified) {
-            // create confirmationToken
-            var issuedAt = new Date().getTime()
-            var expirationTime = config.get('verification.timeout')
-            var expiresAt = issuedAt + (expirationTime * 1000)
-            var privateKey = config.get('verification.tokenKey')
-            newUser.confirmationToken = Buffer.from(jwt.sign({ "email": newUser.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
-        }
+    if(newUser.userID && newUser.userName && newUser.password) {
         newUser.save(function (err, newUser) {
             if (err) {
                 logger.error("Could not create user: " + err)
                 return callback("Could not create user: " + err, null)
             }
             else {
-                // don't send a mail if verified by admin
-                if(!newUser.isVerified) {
-                    Mail.sendConfirmationEmail(newUser.userName, newUser.email, newUser.confirmationToken)
-                }
                 return callback(null, newUser)
             }
         })
@@ -212,17 +196,6 @@ function updateOne(user, userProps, isAdmin, callback) {
                 user.isAdministrator = false
         }
     }
-    else {
-        // unverify user account if he changed email or password properties. user has to confirm changes by clicking the link in the sent email
-        if(mailChange || passChange) {
-            user.isVerified = false
-            var issuedAt = new Date().getTime()
-            var expirationTime = config.get('verification.timeout')
-            var expiresAt = issuedAt + (expirationTime * 1000)
-            var privateKey = config.get('verification.tokenKey')
-            user.confirmationToken = Buffer.from(jwt.sign({ "email": user.email }, privateKey, { expiresIn: expiresAt, algorithm: 'HS256' })).toString("base64")
-        }
-    }
 
     user.save(function(err, newUser) {
         if(err) {
@@ -230,10 +203,6 @@ function updateOne(user, userProps, isAdmin, callback) {
             return callback("Could not update user: " + err, null)
         }
         else {
-            // send another confirmation mail on update of the user's mailaddress or password (if done by user himself and not by admin)
-            if(!newUser.isVerified) {
-                Mail.sendConfirmationEmail(newUser.userName, newUser.email, newUser.confirmationToken)
-            }
             return callback(null, newUser)
         }
     })
