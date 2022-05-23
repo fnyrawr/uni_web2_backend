@@ -1,11 +1,11 @@
 const request = require('supertest')
-const app = require('../../HttpServer')
+const app = require('../../HttpsServer')
 const expect = require('chai').expect
 
-describe("[PREP] Cleaning up Database - removing previous users", function() {
-    it("Status Code depends if DB got populated before the test, so no checks here", function(done) {
+describe("[PREP] Checking if server responds", function() {
+    it("Status Code should be 200", function(done) {
         request(app)
-            .delete('/publicUsers/deleteAllUsers')
+            .get('/')
             .end(function (err, res) {
                 expect(200)
                 if(err) done(err)
@@ -15,7 +15,7 @@ describe("[PREP] Cleaning up Database - removing previous users", function() {
 })
 
 describe("[TEST] Checking if only admin exists", function() {
-    it("No users should be returned", function(done) {
+    it("One user should be returned", function(done) {
         request(app)
             .get('/publicUsers')
             .end(function(err, res) {

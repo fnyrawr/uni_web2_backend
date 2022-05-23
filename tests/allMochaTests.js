@@ -1,6 +1,9 @@
-const server = require('../HttpServer')
+const server = require('../HttpsServer')
 const db = require('../database/db')
 var logger = require('../config/winston')
+
+// This line allows use with https
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 describe('/publicUser endpoint Tests', function() {
     logger.info("Starting automated /publicUser endpoint tests")

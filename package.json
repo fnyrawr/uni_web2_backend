@@ -4,7 +4,7 @@
   "description": "Semesterproject of WebEng2",
   "main": "index.js",
   "scripts": {
-    "start": "node HttpServer.js",
+    "start": "node HttpsServer.js",
     "test": "mocha --reporter spec ./tests/allMochaTests.js"
   },
   "repository": {
