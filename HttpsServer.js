@@ -50,13 +50,13 @@ database.initDb(function (err, db) {
         logger.debug("Connected to the database")
     }
     else {
-        logger.error("Error while trying to connect to the database")
+        logger.error("Error while trying to connect to the database: " + err)
     }
 })
 
 /* Error Handlers */
 app.use(function(req, res, next) {
-    logger.warn("Status 404: URL not found")
+    logger.warn("Status 404: URL " + req.url + " not found")
     res.status(404).send("URL not found")
 })
 

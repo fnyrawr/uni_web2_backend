@@ -1,38 +1,38 @@
 // Login with basic authentication using correct credentials admin:123
 ###
 # @name loginAdminCorrect
-POST http://localhost:8080/authenticate/
+GET https://localhost/authenticate
 Authorization: Basic YWRtaW46MTIz
 
 // Login with basic authentication using wrong credentials
 ###
-POST http://localhost:8080/authenticate
+GET https://localhost/authenticate
 Authorization: Basic admin:1234
 
 @adminToken = {{loginAdminCorrect.response.headers.Authorization}}
 
 // get all users without token
 ###
-GET http://localhost:8080/users
+GET https://localhost/users
 
 // get all users with admin token
 ###
-http://localhost:8080/users
+https://localhost/users
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJpYXQiOjE2NDU3NDYzNjEsImV4cCI6MTY0NzM5MjQwNzQwNn0._U3TEfvtUvL9T3HrhSavq0HBE0ERvOswsG-G6iWHgUM
 
 // Login for manfred
 ###
-POST http://localhost:8080/authenticate/
+POST https://localhost/authenticate
 Authorization: Basic bWFuZnJlZDphc2Rm
 
 // verify manfred
 ###
-http://localhost:8080/signup/confirm/ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmxiV0ZwYkNJNkluUnlZWE5vYldWb1lYSmtRR1Y0YVhOMGFXVnlkQzV1WlhRaUxDSnBZWFFpT2pFMk5EWTBOVFEyTVRnc0ltVjRjQ0k2TVRZME9ERXdORFkzTXpVd04zMC5IdzZUbFhvdjhLcnd0WGdfNDVvRFNDWUVXc3RlRW1WU2VReXUtMzl0NGpR
+https://localhost/signup/confirm/ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmxiV0ZwYkNJNkluUnlZWE5vYldWb1lYSmtRR1Y0YVhOMGFXVnlkQzV1WlhRaUxDSnBZWFFpT2pFMk5EWTBOVFEyTVRnc0ltVjRjQ0k2TVRZME9ERXdORFkzTXpVd04zMC5IdzZUbFhvdjhLcnd0WGdfNDVvRFNDWUVXc3RlRW1WU2VReXUtMzl0NGpR
 
 
 ###
 // creating manfred by himself (needs to be verified after that)
-POST http://localhost:8080/signup
+POST https://localhost/signup
 Content-Type: application/json
 
 {

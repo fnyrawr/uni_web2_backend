@@ -10,11 +10,11 @@ const connectionString = config.get('db.connectionString')
 function initDb(callback) {
     if (_db) {
         return callback(null, _db)
-    } client.connect(config.db.connectionString, config.db.connectionOptions, connected); function connected(err, db) {
+    } client.connect(connectionString, config.db.connectionOptions, connected); function connected(err, db) {
         if (err) {
             return callback(err)
         }
-        logger.debug("DB initialized - connected to: " + config.db.connectionString.split("@")[1]);
+        logger.debug("DB initialized - connected to: " + connectionString.split("@")[1]);
         _db = db
 
         // creating default admin if not exists

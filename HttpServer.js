@@ -51,6 +51,7 @@ database.initDb(function (err, db) {
 
 /* Error Handlers */
 app.use(function(req, res, next) {
+    logger.debug(req.url)
     logger.warn("Status 404: URL not found")
     res.status(404).send("URL not found")
 })
